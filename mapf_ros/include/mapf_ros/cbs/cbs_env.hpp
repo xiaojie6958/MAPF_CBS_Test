@@ -42,7 +42,7 @@ template <> struct hash<State> {
 };
 } // namespace std
 
-///
+///动作类型，上、下、左、右、等待
 enum class Action {
   Up,
   Down,
@@ -75,16 +75,18 @@ std::ostream &operator<<(std::ostream &os, const Action &a) {
 ///
 
 struct Conflict {
+  //冲突类型：顶点冲突或者边冲突
   enum Type {
     Vertex,
     Edge,
   };
-
+  //冲突的时间
   int time;
+  //发生冲突的两个agent索引
   size_t agent1;
   size_t agent2;
   Type type;
-
+  //发生冲突的位置，如果是顶点冲突，则x1和y1起作用；如果是边冲突，则需要两个点确定一条边
   int x1;
   int y1;
   int x2;
@@ -101,7 +103,7 @@ struct Conflict {
     return os;
   }
 };
-
+//顶点约束
 struct VertexConstraint {
   VertexConstraint(int time, int x, int y) : time(time), x(x), y(y) {}
   int time;
@@ -120,7 +122,7 @@ struct VertexConstraint {
     return os << "VC(" << c.time << "," << c.x << "," << c.y << ")";
   }
 };
-
+//顶点约束的hash函数全特化
 namespace std {
 template <> struct hash<VertexConstraint> {
   size_t operator()(const VertexConstraint &s) const {
@@ -132,7 +134,7 @@ template <> struct hash<VertexConstraint> {
   }
 };
 } // namespace std
-
+//边约束
 struct EdgeConstraint {
   EdgeConstraint(int time, int x1, int y1, int x2, int y2)
       : time(time), x1(x1), y1(y1), x2(x2), y2(y2) {}
@@ -157,7 +159,7 @@ struct EdgeConstraint {
               << "," << c.y2 << ")";
   }
 };
-
+//边约束hash的全特化
 namespace std {
 template <> struct hash<EdgeConstraint> {
   size_t operator()(const EdgeConstraint &s) const {
@@ -171,18 +173,18 @@ template <> struct hash<EdgeConstraint> {
   }
 };
 } // namespace std
-
+//约束的结构体
 struct Constraints {
   std::unordered_set<VertexConstraint> vertexConstraints;
   std::unordered_set<EdgeConstraint> edgeConstraints;
-
+  //添加约束
   void add(const Constraints &other) {
     vertexConstraints.insert(other.vertexConstraints.begin(),
                              other.vertexConstraints.end());
     edgeConstraints.insert(other.edgeConstraints.begin(),
                            other.edgeConstraints.end());
   }
-
+  //判断两个约束是否有重合
   bool overlap(const Constraints &other) const {
     for (const auto &vc : vertexConstraints) {
       if (other.vertexConstraints.count(vc) > 0) {
@@ -550,15 +552,23 @@ private:
   }
 #endif
 private:
+  //占据栅格图（障碍物地图）的长
   int m_dimx;
+  //占据栅格图（障碍物地图）的宽
   int m_dimy;
+  //图中障碍物的位置信息
   std::unordered_set<Location> m_obstacles;
+  //多个目标点位置
   std::vector<Location> m_goals;
   // std::vector< std::vector<int> > m_heuristic;
+  //智能体的索引
   size_t m_agentIdx;
   const Constraints *m_constraints;
+  //上一个目标的限制，表征时间步长的一个量
   int m_lastGoalConstraint;
+  //上层扩展次数
   int m_highLevelExpanded;
+  //下层扩展次数
   int m_lowLevelExpanded;
   bool m_disappearAtGoal;
 };

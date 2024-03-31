@@ -1,7 +1,7 @@
 <launch>
 
   <!-- 1.load the low resolution map -->
-  <arg name="map" default="rgmap0217_low_reso.yaml" />
+  <arg name="map" default="mymap5_low_reso.yaml" />
   <group ns="mapf_base">
     <node name="map_server" pkg="map_server" type="map_server"
       args="$(find ridgeback_navigation)/maps/$(arg map)" />
@@ -17,7 +17,7 @@
     mapf_planner/ECBSROS,
     mapf_planner/SIPPROS
     } -->
-    <param name="mapf_planner" value="mapf_planner/ECBSROS" />
+    <param name="mapf_planner" value="mapf_planner/CBSROS" />
     <rosparam file="$(find mapf_base)/params/ecbs_params.yaml" command="load" />
   </node>
 

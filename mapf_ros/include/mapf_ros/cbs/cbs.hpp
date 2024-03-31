@@ -76,7 +76,7 @@ public:
               std::vector<PlanResult<State, Action, Cost>> &solution,
               const double &time_tolerance) {
     Timer timer;
-
+    //上层规划的一个初始值，即暂不考虑各个底层规划的冲突
     HighLevelNode start;
     start.solution.resize(initialStates.size());
     start.constraints.resize(initialStates.size());
@@ -101,6 +101,7 @@ public:
     }
 
     // std::priority_queue<HighLevelNode> open;
+    //定义了一个二叉堆，该堆用于存储HighLevelNode类型的对象，并且该堆是可变的。排序依据是cost（重载"<""的方式可以看出)
     typename boost::heap::d_ary_heap<HighLevelNode, boost::heap::arity<2>,
                                      boost::heap::mutable_<true>>
         open;
@@ -111,13 +112,16 @@ public:
     solution.clear();
     int id = 1;
     while (!open.empty()) {
+      //弹出代价最小的上层规划结果
       HighLevelNode P = open.top();
+      //上层规划的次数增加1
       m_env.onExpandHighLevelNode(P.cost);
       // std::cout << "expand: " << P << std::endl;
 
       open.pop();
 
       Conflict conflict;
+      //判断下层规划中是否有冲突，如果有，找出第一个冲突，如果没有，规划结束，当前的上层规划结果即为全局结果
       if (!m_env.getFirstConflict(P.solution, conflict)) {
         // std::cout << "done; cost: " << P.cost << std::endl;
         solution = P.solution;
@@ -130,6 +134,7 @@ public:
       // conflict.type << std::endl;
 
       std::map<size_t, Constraints> constraints;
+      //从冲突中构建新的限制条件
       m_env.createConstraintsFromConflict(conflict, constraints);
       for (const auto &c : constraints) {
         // std::cout << "Add HL node for " << c.first << std::endl;
@@ -140,19 +145,20 @@ public:
         // (optional) check that this constraint was not included already
         // std::cout << newNode.constraints[i] << std::endl;
         // std::cout << c.second << std::endl;
+        //对于新的限制约束条件，断言新的上层规划的限制条件与新建的限制条件没有重叠
         assert(!newNode.constraints[i].overlap(c.second));
-
+        //在新的上层规划的限制条件中增加新的限制条件
         newNode.constraints[i].add(c.second);
-
+        //总的代价减去产生冲突的机器人的原有代价
         newNode.cost -= newNode.solution[i].cost;
-
+        //在增加了新的限制后，对冲突发生改变的机器人进行新的下层规划
         LowLevelEnvironment llenv(m_env, i, newNode.constraints[i]);
         LowLevelSearch_t lowLevel(llenv);
         bool success = lowLevel.search(initialStates[i], newNode.solution[i],
                                        timer, time_tolerance);
 
         newNode.cost += newNode.solution[i].cost;
-
+        //如果下层规划成功，将新的上层规划节点纳入考查范围
         if (success) {
           // std::cout << "  success. cost: " << newNode.cost << std::endl;
           auto handle = open.push(newNode);
@@ -174,11 +180,13 @@ public:
 
 private:
   struct HighLevelNode {
+    //每一个机器人的规划结果存储
     std::vector<PlanResult<State, Action, Cost>> solution;
+    //每一个机器人的限制条件约束
     std::vector<Constraints> constraints;
-
+    //上层规划的总代价
     Cost cost;
-
+    //上层规划节点的id好
     int id;
 
     typename boost::heap::d_ary_heap<HighLevelNode, boost::heap::arity<2>,
