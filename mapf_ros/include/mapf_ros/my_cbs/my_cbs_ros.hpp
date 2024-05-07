@@ -1,0 +1,115 @@
+/*
+ * @Descripttion:
+ * @version:
+ * @Author: CyberC3
+ * @Date: 2024-04-06 22:59:03
+ * @LastEditors: zhu-hu
+ * @LastEditTime: 2024-05-04 22:01:00
+ */
+#pragma once
+
+#include <ros/ros.h>
+
+#include <costmap_2d/costmap_2d.h>
+#include <costmap_2d/costmap_2d_ros.h>
+#include <nav_msgs/Path.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
+
+// #include "mapf_ros/mapf_ros.hpp"
+#include "my_cbs.hpp"
+#include "my_cbs_env.hpp"
+
+#include "parser.h"
+
+namespace mapf {
+
+class MYCBSROS {
+public:
+  struct ResultPoint {
+    int point_id;
+    int cost;
+    int wait_time;
+
+    ResultPoint() {
+      cost = 0;
+      wait_time = 0;
+    }
+  };
+  struct Conflict {
+    std::pair<int, int> conflict_id;
+    std::pair<int, int> point_ids;
+  };
+  MYCBSROS(ros::NodeHandle *nh);
+  MYCBSROS(std::string name);
+
+  void initialize(std::string name);
+
+  bool makePlan(const std::vector<int> &start, const std::vector<int> &goal,
+                mapf_msgs::GlobalPlan &plan, double &cost,
+                std::vector<std::vector<int>> &all_path_ids,
+                const double &time_tolerance);
+
+  void generatePlan(const std::vector<PlanResult<State, Action, int>> &solution,
+                    const std::vector<int> &goal, mapf_msgs::GlobalPlan &plan,
+                    double &cost);
+  ~MYCBSROS();
+
+protected:
+  bool initialized_;
+
+  ros::NodeHandle *nh_;
+
+  //存储规划后的所有路径点
+  std::vector<std::vector<int>> all_path_ids_;
+
+  //存储规划后的结果
+  std::vector<std::vector<ResultPoint>> all_results_;
+
+  //存储每一个机器人运动过程中的路径点
+  std::vector<std::vector<std::pair<double, double>>> all_pos_;
+
+  std::vector<int> start_ids_;
+  std::vector<int> goal_ids_;
+
+  ros::Publisher pub_start_goal_point_;
+
+  ros::Publisher pub_start_goal_text_;
+
+  ros::Publisher pub_one_step_pos_;
+
+  visualization_msgs::MarkerArray start_goal_points_;
+  visualization_msgs::MarkerArray start_goal_texts_;
+  visualization_msgs::MarkerArray one_step_pos_;
+
+public:
+  void calculateAllPos();
+  void publishStartGoalPoint();
+  void publishOneStepPos(const int step);
+  void generateAllResult(const double step_length);
+
+  //解决conflict中包含冲突
+  bool conflictSolve(Conflict conflict);
+
+  //检测path_i和path_j中的第一个冲突，存到conflict里
+  bool conflictDetect(int path_i, int path_j, Conflict &conflict);
+
+  //检测所有路径中的第一个冲突，存到conflict里
+  bool firstConflictDetect(Conflict &conflict);
+
+  //判断pt1和pt2是否有冲突
+  bool twoResultPointConflict(const ResultPoint pt1, const ResultPoint pt2);
+
+  void printAllResult();
+  map_parser::MapParser *map_parser_ = nullptr;
+
+  //地图中所有的node节点
+  std::vector<MapParser::MAP_NODE> map_nodes_;
+  // node节点由名字到id的转换map
+  std::unordered_map<std::string, int> node_name_to_id_;
+  // node节点由id到名字的转换map
+  std::unordered_map<int, std::string> node_id_to_name_;
+  //地图的拓扑结构
+  std::vector<std::vector<float>> original_network_array_;
+};
+} // namespace mapf

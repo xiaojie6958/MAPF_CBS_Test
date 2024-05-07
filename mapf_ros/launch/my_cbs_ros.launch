@@ -1,0 +1,10 @@
+<launch>
+  <!-- <arg name="map_path" default="$(find map_parser)/data/test_route.xml"/> -->
+
+  <node pkg="mapf_ros" type="my_cbs_ros" respawn="false" name="my_cbs_ros_node" output="screen">
+      <param name="map_path" value="$(find map_parser)/data/test_route.xml"/>
+      <!-- <rosparam file="$(find osm_parser)/config/osm_parser.yaml" command="load" /> -->
+  </node>
+
+
+</launch>
