@@ -186,7 +186,7 @@ private:
     std::vector<Constraints> constraints;
     //上层规划的总代价
     Cost cost;
-    //上层规划节点的id好
+    //上层规划节点的id
     int id;
 
     typename boost::heap::d_ary_heap<HighLevelNode, boost::heap::arity<2>,

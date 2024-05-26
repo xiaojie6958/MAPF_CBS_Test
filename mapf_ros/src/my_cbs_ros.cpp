@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-14 22:57:43
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-04 22:31:30
+ * @LastEditTime: 2024-05-24 13:01:54
  */
 #include <ros/ros.h>
 
@@ -41,6 +41,9 @@ MYCBSROS::MYCBSROS(ros::NodeHandle *nh) : nh_(nh), initialized_(false) {
 
   pub_one_step_pos_ =
       nh_->advertise<visualization_msgs::MarkerArray>("/one_step_pos", 5);
+
+  sub_new_order_ =
+      nh_->subscribe("/new_order", 5, &MYCBSROS::newOrderCallback, this);
 }
 
 MYCBSROS::MYCBSROS(std::string name) : initialized_(false) { initialize(name); }
@@ -54,6 +57,7 @@ void MYCBSROS::initialize(std::string name) {
 }
 
 bool MYCBSROS::makePlan(const std::vector<int> &start,
+                        const std::vector<int> &show,
                         const std::vector<int> &goal,
                         mapf_msgs::GlobalPlan &plan, double &cost,
                         std::vector<std::vector<int>> &all_path_ids,
@@ -71,7 +75,7 @@ bool MYCBSROS::makePlan(const std::vector<int> &start,
   }
 
   int agent_num = start.size();
-  start_ids_ = start;
+  start_ids_ = show;
   goal_ids_ = goal;
   // mapf env
   std::vector<State> startStates;
@@ -123,6 +127,7 @@ bool MYCBSROS::makePlan(const std::vector<int> &start,
     }
 
     // all_path_ids_ = std::move(all_path_ids);
+    all_path_ids_.clear();
     all_path_ids_ = all_path_ids;
 
     // calculateAllPos();
@@ -220,46 +225,140 @@ void MYCBSROS::generatePlan(
 //   }
 // }
 
+void MYCBSROS::newOrderCallback(const std_msgs::BoolConstPtr &msg_in) {
+  //第一步：保存现有的all_results_;
+  auto original_all_results = all_results_;
+
+  //新订单来临之后，存储原有机器人的新起点
+  std::vector<ResultPoint> original_new_start_points;
+  original_new_start_points.clear();
+  original_new_start_points.resize(all_results_.size());
+
+  std::vector<int> original_next_index;
+  original_next_index.resize(all_results_.size());
+  int point_count = map_nodes_.size();
+
+  for (int i = 0; i < all_results_.size(); i++) {
+    if (control_step_ - 1 >= all_pos_[i].size()) {
+      ResultPoint pt;
+      pt.cost = 0;
+      pt.wait_time = 0;
+      pt.point_id = -1;
+      pt.x_y = std::make_pair(-1, -1);
+      original_new_start_points[i] = pt;
+      original_next_index[i] = -1;
+      continue;
+    }
+    ResultPoint pt;
+    pt.cost = 0;
+    pt.wait_time = 0;
+    pt.x_y = all_pos_[i][control_step_ - 1];
+    pt.point_id = point_count++;
+    original_new_start_points[i] = pt;
+    for (int j = 0; j < all_results_[i].size() - 1; j++) {
+      if (control_step_ - 1 > all_results_[i][j].cost) {
+        original_next_index[i] = j + 1;
+      }
+    }
+  }
+
+  original_all_results.clear();
+  for (int i = 0; i < all_results_.size(); i++) {
+    if (original_next_index[i] == -1)
+      continue;
+
+    std::vector<ResultPoint> one_path;
+    one_path.clear();
+    one_path.emplace_back(original_new_start_points[i]);
+    one_path.insert(one_path.end(),
+                    all_results_[i].begin() + original_next_index[i],
+                    all_results_[i].end());
+    original_all_results.emplace_back(one_path);
+  }
+
+  //还需要更新original_all_results里的cost!!!
+  for (int i = 0; i < original_all_results.size(); i++) {
+    for (int j = 1; j < original_all_results[i].size(); j++) {
+      double length = std::hypot(original_all_results[i][j].x_y.first -
+                                     original_all_results[i][j - 1].x_y.first,
+                                 original_all_results[i][j].x_y.second -
+                                     original_all_results[i][j - 1].x_y.second);
+      int expand_step = std::ceil(length / 0.2);
+      original_all_results[i][j].cost =
+          original_all_results[i][j - 1].cost + expand_step;
+    }
+  }
+
+  //第二步：将已有的路径截掉走过的路径，重新保存all_path_ids_
+
+  //第三步：重新规划新传进来的任务
+
+  //第四步：将原来的all_path_ids_存入新的all_path_ids_
+
+  mapf_msgs::GlobalPlan plan;
+  std::vector<std::vector<int>> all_path_ids;
+  double cost = 0;
+  double time_tolerance = 5.0;
+
+  std::vector<int> start{55, 38};
+  std::vector<int> goal{40, 13};
+
+  makePlan(start, start, goal, plan, cost, all_path_ids, time_tolerance);
+
+  std::cout << "Plan result : " << std::endl;
+
+  generateAllResult(0.2);
+
+  //把两个部分合并
+  all_results_.insert(all_results_.begin(), original_all_results.begin(),
+                      original_all_results.end());
+
+  generateAllRoutePathForShow();
+
+  //第五步：进行冲突检测及冲突消解
+  mapf::MYCBSROS::Conflict conflict;
+  while (firstConflictDetect(conflict) == true) {
+
+    conflictSolve(conflict);
+  }
+
+  printAllResult();
+
+  //第六步：重新计算新的all_pos_
+  calculateAllPos();
+
+  control_step_ = 0;
+}
+
 void MYCBSROS::calculateAllPos() {
   all_pos_.clear();
   std::vector<std::pair<double, double>> one_path;
   double step_length = 0.2;
-  for (int i = 0; i < all_path_ids_.size(); i++) {
+  for (int i = 0; i < all_results_.size(); i++) {
     one_path.clear();
-    for (int j = 1; j < all_path_ids_[i].size(); j++) {
-      one_path.emplace_back(
-          std::make_pair(map_nodes_[all_path_ids_[i][j - 1]].x_pos,
-                         map_nodes_[all_path_ids_[i][j - 1]].y_pos));
+    for (int j = 1; j < all_results_[i].size(); j++) {
+      one_path.emplace_back(all_results_[i][j - 1].x_y);
       int wait_time = all_results_[i][j - 1].wait_time;
       while (wait_time > 0) {
-        one_path.emplace_back(
-            std::make_pair(map_nodes_[all_path_ids_[i][j - 1]].x_pos,
-                           map_nodes_[all_path_ids_[i][j - 1]].y_pos));
+        one_path.emplace_back(all_results_[i][j - 1].x_y);
         wait_time--;
       }
-      double length = std::hypot(map_nodes_[all_path_ids_[i][j]].x_pos -
-                                     map_nodes_[all_path_ids_[i][j - 1]].x_pos,
-                                 map_nodes_[all_path_ids_[i][j]].y_pos -
-                                     map_nodes_[all_path_ids_[i][j - 1]].y_pos);
+      double length = std::hypot(
+          all_results_[i][j].x_y.first - all_results_[i][j - 1].x_y.first,
+          all_results_[i][j].x_y.second - all_results_[i][j - 1].x_y.second);
       int expand_step = std::ceil(length / step_length);
       std::pair<double, double> unit{
-          (map_nodes_[all_path_ids_[i][j]].x_pos -
-           map_nodes_[all_path_ids_[i][j - 1]].x_pos) /
+          (all_results_[i][j].x_y.first - all_results_[i][j - 1].x_y.first) /
               length,
-          (map_nodes_[all_path_ids_[i][j]].y_pos -
-           map_nodes_[all_path_ids_[i][j - 1]].y_pos) /
+          (all_results_[i][j].x_y.second - all_results_[i][j - 1].x_y.second) /
               length};
       for (int k = 1; k < expand_step; k++) {
-        one_path.emplace_back(
-            std::make_pair(map_nodes_[all_path_ids_[i][j - 1]].x_pos +
-                               k * unit.first * step_length,
-                           map_nodes_[all_path_ids_[i][j - 1]].y_pos +
-                               k * unit.second * step_length));
+        one_path.emplace_back(std::make_pair(
+            all_results_[i][j - 1].x_y.first + k * unit.first * step_length,
+            all_results_[i][j - 1].x_y.second + k * unit.second * step_length));
       }
     }
-    one_path.emplace_back(
-        std::make_pair(map_nodes_[all_path_ids_[i].back()].x_pos,
-                       map_nodes_[all_path_ids_[i].back()].y_pos));
+    one_path.emplace_back(all_results_[i].back().x_y);
     std::cout << "one path[" << i << "] nums : " << one_path.size()
               << std::endl;
     all_pos_.emplace_back(one_path);
@@ -328,7 +427,7 @@ void MYCBSROS::publishStartGoalPoint() {
   point_marker.scale.x = 2.0;
   point_marker.scale.y = 2.0;
   point_marker.scale.z = 2.0;
-  for (int i = 0; i < start_ids_.size(); ++i) {
+  for (int i = 0; i < all_results_.size(); ++i) {
     point_marker.header.seq = count;
     point_marker.id = count;
     if (count % 3 == 0) {
@@ -348,6 +447,8 @@ void MYCBSROS::publishStartGoalPoint() {
       point_marker.color.a = 1.0;
     }
     point_marker.color.a = 0.6;
+    // point_marker.pose.position.x = all_results_[i].front().x_y.first;
+    // point_marker.pose.position.y = all_results_[i].front().x_y.second;
     point_marker.pose.position.x = map_nodes_[start_ids_[i]].x_pos;
     point_marker.pose.position.y = map_nodes_[start_ids_[i]].y_pos;
     count++;
@@ -357,7 +458,7 @@ void MYCBSROS::publishStartGoalPoint() {
 
   int color_count = 0;
   point_marker.type = visualization_msgs::Marker::CUBE;
-  for (int i = 0; i < goal_ids_.size(); ++i) {
+  for (int i = 0; i < all_results_.size(); ++i) {
     point_marker.header.seq = count;
     point_marker.id = count;
     if (color_count % 3 == 0) {
@@ -377,6 +478,8 @@ void MYCBSROS::publishStartGoalPoint() {
       point_marker.color.a = 1.0;
     }
     point_marker.color.a = 0.6;
+    // point_marker.pose.position.x = all_results_[i].back().x_y.first;
+    // point_marker.pose.position.y = all_results_[i].back().x_y.second;
     point_marker.pose.position.x = map_nodes_[goal_ids_[i]].x_pos;
     point_marker.pose.position.y = map_nodes_[goal_ids_[i]].y_pos;
     count++;
@@ -405,8 +508,10 @@ void MYCBSROS::publishStartGoalPoint() {
   text_marker.color.g = 0.0;
   text_marker.color.b = 0.0;
   text_marker.color.a = 1.0;
-  for (int i = 0; i < start_ids_.size(); i++) {
+  for (int i = 0; i < all_results_.size(); i++) {
     text_marker.id = id_count++;
+    // text_marker.pose.position.x = all_results_[i].front().x_y.first;
+    // text_marker.pose.position.y = all_results_[i].front().x_y.second;
     text_marker.pose.position.x = map_nodes_[start_ids_[i]].x_pos;
     text_marker.pose.position.y = map_nodes_[start_ids_[i]].y_pos;
     text_marker.pose.position.z = 0.0;
@@ -414,8 +519,10 @@ void MYCBSROS::publishStartGoalPoint() {
     start_goal_texts_.markers.emplace_back(text_marker);
   }
 
-  for (int i = 0; i < goal_ids_.size(); i++) {
+  for (int i = 0; i < all_results_.size(); i++) {
     text_marker.id = id_count++;
+    // text_marker.pose.position.x = all_results_[i].back().x_y.first;
+    // text_marker.pose.position.y = all_results_[i].back().x_y.second;
     text_marker.pose.position.x = map_nodes_[goal_ids_[i]].x_pos;
     text_marker.pose.position.y = map_nodes_[goal_ids_[i]].y_pos;
     text_marker.pose.position.z = 0.0;
@@ -436,6 +543,8 @@ void MYCBSROS::generateAllResult(const double step_length) {
     pt.point_id = all_path_ids_[i][0];
     pt.cost = 0;
     pt.wait_time = 0;
+    pt.x_y = std::make_pair(map_nodes_[pt.point_id].x_pos,
+                            map_nodes_[pt.point_id].y_pos);
     one_path[0] = pt;
     for (int j = 1; j < all_path_ids_[i].size(); ++j) {
       pt.point_id = all_path_ids_[i][j];
@@ -445,10 +554,14 @@ void MYCBSROS::generateAllResult(const double step_length) {
                                      map_nodes_[all_path_ids_[i][j - 1]].y_pos);
       int expand_step = std::ceil(length / step_length);
       pt.cost = one_path[j - 1].cost + expand_step;
+      pt.x_y = std::make_pair(map_nodes_[pt.point_id].x_pos,
+                              map_nodes_[pt.point_id].y_pos);
       one_path[j] = pt;
     }
     all_results_.emplace_back(one_path);
   }
+
+  generateAllRoutePathForShow();
 
   for (int i = 0; i < all_results_.size(); ++i) {
     for (int j = 0; j < all_results_[i].size(); ++j) {
@@ -457,6 +570,19 @@ void MYCBSROS::generateAllResult(const double step_length) {
                 << all_results_[i][j].wait_time << "], ";
     }
     std::cout << std::endl;
+  }
+}
+
+void MYCBSROS::generateAllRoutePathForShow() {
+
+  all_route_path_for_show_.clear();
+  for (int i = 0; i < all_results_.size(); i++) {
+    std::vector<std::pair<double, double>> one_path;
+    one_path.clear();
+    for (int j = 0; j < all_results_[i].size(); j++) {
+      one_path.emplace_back(all_results_[i][j].x_y);
+    }
+    all_route_path_for_show_.emplace_back(one_path);
   }
 }
 
@@ -546,8 +672,16 @@ bool MYCBSROS::conflictSolve(Conflict conflict) {
 
 // conflict是输出
 bool MYCBSROS::firstConflictDetect(Conflict &conflict) {
-  for (int i = 0; i < all_path_ids_.size(); ++i) {
-    for (int j = i + 1; j < all_path_ids_.size(); ++j) {
+  // for (int i = 0; i < all_path_ids_.size(); ++i) {
+  //   for (int j = i + 1; j < all_path_ids_.size(); ++j) {
+  //     if (conflictDetect(i, j, conflict) == true) {
+  //       //产生冲突
+  //       return true;
+  //     }
+  //   }
+  // }
+  for (int i = 0; i < all_results_.size(); ++i) {
+    for (int j = i + 1; j < all_results_.size(); ++j) {
       if (conflictDetect(i, j, conflict) == true) {
         //产生冲突
         return true;
@@ -636,93 +770,114 @@ void MYCBSROS::printAllResult() {
   }
 }
 
+bool MYCBSROS::assignTasks(const std::vector<int> &vehicles_init,
+                           const std::vector<int> &start,
+                           std::vector<int> &assign_result) {
+  std::vector<std::pair<int, bool>> vehicle_states;
+  vehicle_states.clear();
+  assign_result.clear();
+  assign_result.resize(start.size());
+  for (int i = 0; i < vehicles_init.size(); i++) {
+    vehicle_states.emplace_back(std::make_pair(vehicles_init[i], false));
+  }
+
+  //找到达每个任务点的最短路径
+  std::vector<double> shortest_lengths;
+  std::shared_ptr<std::vector<std::vector<float>>> graph =
+      std::make_shared<std::vector<std::vector<float>>>(
+          original_network_array_);
+  map_parser::path_finder_algorithm::Dijkstra dij;
+  for (int i = 0; i < start.size(); i++) {
+    double min_dis = DBL_MAX;
+    for (int j = 0; j < vehicles_init.size(); j++) {
+      auto path =
+          dij.findShortestPath(graph, vehicle_states[j].first, start[i]);
+      double dis = calculatePathLength(path);
+      if (dis < min_dis) {
+        min_dis = dis;
+      }
+    }
+    shortest_lengths.emplace_back(min_dis);
+  }
+
+  std::multimap<double, int> multi_maps;
+  for (int i = 0; i < start.size(); i++) {
+    multi_maps.insert(std::make_pair(shortest_lengths[i], i));
+  }
+
+  for (auto &iter : multi_maps) {
+    double min_distance = DBL_MAX;
+    int res = -1;
+    for (int j = 0; j < vehicles_init.size(); j++) {
+      if (vehicle_states[j].second == true)
+        continue;
+      std::shared_ptr<std::vector<std::vector<float>>> graph =
+          std::make_shared<std::vector<std::vector<float>>>(
+              original_network_array_);
+      map_parser::path_finder_algorithm::Dijkstra dij;
+      auto path = dij.findShortestPath(graph, vehicle_states[j].first,
+                                       start[iter.second]);
+      double dis = calculatePathLength(path);
+      if (dis < min_distance) {
+        res = j;
+        min_distance = dis;
+      }
+    }
+    // assign_result.emplace_back(vehicles_init[res]);
+    assign_result[iter.second] = vehicles_init[res];
+    vehicle_states[res].second = true;
+  }
+  std::cout << "assign_result : ";
+  for (int i = 0; i < assign_result.size(); i++) {
+    std::cout << assign_result[i] << ", ";
+  }
+  std::cout << std::endl;
+
+  return true;
+}
+
+double MYCBSROS::calculatePathLength(const std::vector<int> &path) {
+  double length = 0.0;
+  if (path.empty())
+    return DBL_MAX;
+  for (int i = 1; i < path.size(); i++) {
+    length += original_network_array_[path[i - 1]][path[i]];
+  }
+  return length;
+}
+
 MYCBSROS::~MYCBSROS() {
   delete map_parser_;
   ROS_INFO("Exit MYCBS planner.");
 }
 } // namespace mapf
 
-//   ros::init(argc, argv, "map_parser");
-
-//   ros::NodeHandle nh("~");
-
-//   map_parser::MapParser map_parser(&nh);
-
-//   map_parser::path_finder_algorithm::Dijkstra dijkstra_planner;
-
-//   ros::Rate loop_rate(10);
-
-//   map_parser.parse();
-
-//   int source_id = 2;
-
-//   int target_id = 6;
-
-//   bool path_found = false;
-
-//   std::vector<int> path_ids;
-
-//   std::cout << "source_id : " << source_id << std::endl;
-//   std::cout << "target_id : " << target_id << std::endl;
-
-//   try {
-//     double start_time = ros::Time::now().toSec();
-//     path_ids =
-//     dijkstra_planner.findShortestPath(map_parser.getGraphOfVertex(),
-//                                                  source_id, target_id);
-//     path_found = true;
-
-//     ROS_INFO("OSM planner: Time of planning : %f  ms",
-//              1000.0 * (ros::Time::now().toSec() - start_time));
-
-//   } catch (map_parser::path_finder_algorithm::PathFinderException &e) {
-//     path_found = false;
-//     if (e.getErrId() ==
-//         map_parser::path_finder_algorithm::PathFinderException::NO_PATH_FOUND)
-//         {
-//       ROS_ERROR("OSM planner: Make plan failed...");
-//     } else
-//       ROS_ERROR("OSM planner: Undefined error");
-//   }
-
-//   if (path_ids.size() != 0) {
-//     std::cout << "planning results from [" << source_id << "] to [" <<
-//     target_id
-//               << "]" << std::endl;
-//     for (int i = 0; i < path_ids.size(); i++) {
-//       std::cout << path_ids[i] << ", ";
-//     }
-//     std::cout << std::endl;
-
-//     std::cout << "name results : ";
-//     for (int i = 0; i < path_ids.size(); i++) {
-//       std::cout << (map_parser.node_id_to_name())[path_ids[i]] << ", ";
-//     }
-//     std::cout << std::endl;
-//   }
-
-//   while (ros::ok()) {
-//     map_parser.publishMapArray();
-//     map_parser.publishMapArrow();
-
-//     if (path_found) {
-//       map_parser.publishRouteNetwork(path_ids);
-//     }
-//     ros::spinOnce();
-//     loop_rate.sleep(); // sleep 0.1s
-//   }
-
-//   return 0;
-
 int main(int argc, char **argv) {
 
   ros::init(argc, argv, "my_cbs_test_node");
   ros::NodeHandle nh("~");
   mapf::MYCBSROS my_cbs_ros(&nh);
+  //车辆的初始位置
+  std::vector<int> vehicles_init{1, 2, 3, 4};
+  //{0, 5, 2, 16, 55, 38}
+  //一系列的起始位置
+  // std::vector<int> start{3, 5, 2, 16}; // 0,5,2,16
+  // //{32, 10, 9, 29, 40, 13}
+  // //一系列的终点位置
+  // std::vector<int> goal{32, 10, 9, 29};
 
-  std::vector<int> start{0, 5, 2, 16, 55, 38};
+  std::vector<int> start{11, 13, 20, 31};
+  //{32, 10, 9, 29, 40, 13}
+  //一系列的终点位置
+  std::vector<int> goal{12, 16, 47, 53};
 
-  std::vector<int> goal{32, 10, 9, 29, 40, 13};
+  std::vector<int> assign_result;
+
+  my_cbs_ros.assignTasks(start, goal, assign_result);
+
+  // start.clear();
+
+  // start = assign_result;
 
   mapf_msgs::GlobalPlan plan;
   std::vector<std::vector<int>> all_path_ids;
@@ -730,7 +885,8 @@ int main(int argc, char **argv) {
   double time_tolerance = 5.0;
 
   double time = ros::Time::now().toSec();
-  my_cbs_ros.makePlan(start, goal, plan, cost, all_path_ids, time_tolerance);
+  my_cbs_ros.makePlan(start, start, goal, plan, cost, all_path_ids,
+                      time_tolerance);
 
   std::cout << "Plan result : " << std::endl;
 
@@ -759,7 +915,7 @@ int main(int argc, char **argv) {
   my_cbs_ros.calculateAllPos();
 
   ros::Rate loop_rate(10);
-  int step = 0;
+  my_cbs_ros.control_step_ = 0;
 
   while (ros::ok()) {
     my_cbs_ros.map_parser_->publishMapArray();
@@ -769,10 +925,11 @@ int main(int argc, char **argv) {
 
     // std::cout << all_path_ids.size() << std::endl;
 
-    my_cbs_ros.map_parser_->publishAllRoutePath(all_path_ids);
+    my_cbs_ros.map_parser_->publishAllRoutePath(
+        my_cbs_ros.all_route_path_for_show_);
 
-    my_cbs_ros.publishOneStepPos(step);
-    step++;
+    my_cbs_ros.publishOneStepPos(my_cbs_ros.control_step_);
+    my_cbs_ros.control_step_ = my_cbs_ros.control_step_ + 1;
 
     // if (path_found) {
     //   map_parser.publishRouteNetwork(path_ids);

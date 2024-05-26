@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-03-17 11:26:22
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-04 22:05:09
+ * @LastEditTime: 2024-05-19 23:45:04
  */
 #include "parser.h"
 #include "path_finder_algorithm/dijkstra.h"
@@ -562,6 +562,59 @@ void MapParser::drawOneRoutePath(const std::vector<int> &path_id,
   all_route_paths_markers.markers.push_back(path_line);
 }
 
+void MapParser::drawOneRoutePath(
+    const std::vector<std::pair<double, double>> &one_path, int &count_id) {
+  visualization_msgs::Marker path_line;
+  path_line.header.frame_id = "world";
+  path_line.header.seq = count_id;
+  path_line.header.stamp = ros::Time::now();
+  path_line.ns = "route_path_points";
+  path_line.action = visualization_msgs::Marker::ADD;
+  path_line.type = visualization_msgs::Marker::LINE_STRIP;
+  path_line.id = count_id;
+  path_line.lifetime = ros::Duration(0);
+  // Scale
+  path_line.scale.x = 0.5;
+  path_line.scale.y = 0.5;
+  path_line.scale.z = 0.5;
+  if (count_id % 3 == 0) {
+    int scale = count_id / 3;
+    path_line.color.r = 1.0;
+    path_line.color.g = 0.0;
+    path_line.color.b = 0.0;
+    path_line.scale.x = 1.0;
+    path_line.scale.y = 1.0;
+  } else if (count_id % 3 == 1) {
+    int scale = count_id / 3;
+    path_line.color.r = 0.0;
+    path_line.color.g = 0.0;
+    path_line.color.b = 1.0;
+    path_line.scale.x = 1.0;
+    path_line.scale.y = 1.0;
+  } else {
+    int scale = count_id / 3;
+    path_line.color.r = 0.0;
+    path_line.color.g = 1.0;
+    path_line.color.b = 1.0;
+    path_line.scale.x = 1.0;
+    path_line.scale.y = 1.0;
+  }
+  // path_line.color.r = 1.0;
+  // path_line.color.g = 1.0;
+  // path_line.color.b = 0.0;
+  path_line.color.a = 0.5;
+
+  geometry_msgs::Point temp_point;
+
+  for (int i = 0; i < one_path.size(); i++) {
+    temp_point.x = one_path[i].first;
+    temp_point.y = one_path[i].second;
+    path_line.points.push_back(temp_point);
+  }
+
+  all_route_paths_markers.markers.push_back(path_line);
+}
+
 void MapParser::publishAllRoutePath(
     const std::vector<std::vector<int>> &all_path_ids) {
 
@@ -569,6 +622,17 @@ void MapParser::publishAllRoutePath(
   all_route_paths_markers.markers.clear();
   for (int i = 0; i < all_path_ids.size(); i++) {
     drawOneRoutePath(all_path_ids[i], id_count);
+    id_count++;
+  }
+  all_route_paths_pub.publish(all_route_paths_markers);
+}
+
+void MapParser::publishAllRoutePath(
+    const std::vector<std::vector<std::pair<double, double>>> &route_paths) {
+  int id_count = 0;
+  all_route_paths_markers.markers.clear();
+  for (int i = 0; i < route_paths.size(); ++i) {
+    drawOneRoutePath(route_paths[i], id_count);
     id_count++;
   }
   all_route_paths_pub.publish(all_route_paths_markers);

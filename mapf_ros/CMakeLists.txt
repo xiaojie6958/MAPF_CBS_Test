@@ -1,14 +1,13 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(mapf_ros)
 
-# Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++14)
 
 # Find catkin macros and libraries if COMPONENTS list like find_package(catkin
 # REQUIRED COMPONENTS xyz) is used, also find other catkin packages
 find_package(
   catkin REQUIRED
-  COMPONENTS roscpp
+  COMPONENTS cmake_modules
+             roscpp
              rospy
              std_msgs
              nav_msgs
@@ -22,6 +21,11 @@ find_package(
              actionlib
              roslib
              pluginlib)
+
+find_package(TinyXML REQUIRED)
+
+# Compile as C++11, supported in ROS Kinetic and newer
+add_compile_options(-std=c++11)
 
 catkin_package(
   INCLUDE_DIRS
@@ -44,9 +48,10 @@ catkin_package(
   move_base_msgs
   actionlib
   roslib
-  pluginlib)
+  pluginlib
+  DEPENDS system_lib TinyXML)
 
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${TinyXML_INCLUDE_DIRS})
 
 # cbs
 add_library(cbs_planner_ros src/cbs_ros.cpp)
@@ -65,6 +70,14 @@ add_library(sipp_planner_ros src/prioritized_sipp_ros.cpp)
 add_dependencies(sipp_planner_ros ${${PROJECT_NAME}_EXPORTED_TARGETS}
                  ${catkin_EXPORTED_TARGETS})
 target_link_libraries(sipp_planner_ros ${Boost_LIBRARIES} ${catkin_LIBRARIES})
+
+# my_cbs
+add_executable(my_cbs_ros include/mapf_ros/my_cbs/path_finder_algorithm/dijkstra.cpp 
+                          include/mapf_ros/my_cbs/parser.cpp 
+                          src/my_cbs_ros.cpp)
+add_dependencies(my_cbs_ros ${${PROJECT_NAME}_EXPORTED_TARGETS}
+                 ${catkin_EXPORTED_TARGETS})
+target_link_libraries(my_cbs_ros ${catkin_LIBRARIES} ${TinyXML_LIBRARIES})
 
 install(
   TARGETS cbs_planner_ros ecbs_planner_ros sipp_planner_ros

@@ -52,7 +52,6 @@ template <typename State, typename Action, typename Cost, typename Environment,
 class AStar {
 public:
   AStar(Environment &environment) : m_env(environment) {}
-
   bool search(const State &startState,
               PlanResult<State, Action, Cost> &solution, Timer &timer,
               const double &time_tolerance, Cost initialCost = 0) {

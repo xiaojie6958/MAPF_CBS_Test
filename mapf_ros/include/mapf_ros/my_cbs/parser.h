@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-03-17 11:26:30
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-04-22 12:20:35
+ * @LastEditTime: 2024-05-19 22:54:09
  */
 #pragma once
 
@@ -117,6 +117,12 @@ public:
   void publishRouteNetwork(const std::vector<int> &route_paths_id);
 
   void drawOneRoutePath(const std::vector<int> &path_id, int &count_id);
+
+  void drawOneRoutePath(const std::vector<std::pair<double, double>> &one_path,
+                        int &count_id);
+
+  void publishAllRoutePath(
+      const std::vector<std::vector<std::pair<double, double>>> &route_paths);
 
   void publishAllRoutePath(const std::vector<std::vector<int>> &all_path_ids);
 

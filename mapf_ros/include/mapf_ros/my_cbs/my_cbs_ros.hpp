@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-04 22:01:00
+ * @LastEditTime: 2024-05-24 12:51:34
  */
 #pragma once
 
@@ -16,11 +16,15 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include <std_msgs/Bool.h>
+
 // #include "mapf_ros/mapf_ros.hpp"
 #include "my_cbs.hpp"
 #include "my_cbs_env.hpp"
 
 #include "parser.h"
+
+#include "path_finder_algorithm/dijkstra.h"
 
 namespace mapf {
 
@@ -30,6 +34,7 @@ public:
     int point_id;
     int cost;
     int wait_time;
+    std::pair<double, double> x_y;
 
     ResultPoint() {
       cost = 0;
@@ -45,15 +50,17 @@ public:
 
   void initialize(std::string name);
 
-  bool makePlan(const std::vector<int> &start, const std::vector<int> &goal,
-                mapf_msgs::GlobalPlan &plan, double &cost,
-                std::vector<std::vector<int>> &all_path_ids,
+  bool makePlan(const std::vector<int> &start, const std::vector<int> &show,
+                const std::vector<int> &goal, mapf_msgs::GlobalPlan &plan,
+                double &cost, std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance);
 
   void generatePlan(const std::vector<PlanResult<State, Action, int>> &solution,
                     const std::vector<int> &goal, mapf_msgs::GlobalPlan &plan,
                     double &cost);
   ~MYCBSROS();
+
+  int control_step_ = 0;
 
 protected:
   bool initialized_;
@@ -78,15 +85,21 @@ protected:
 
   ros::Publisher pub_one_step_pos_;
 
+  ros::Subscriber sub_new_order_;
+
   visualization_msgs::MarkerArray start_goal_points_;
   visualization_msgs::MarkerArray start_goal_texts_;
   visualization_msgs::MarkerArray one_step_pos_;
+
+  void generateAllRoutePathForShow();
 
 public:
   void calculateAllPos();
   void publishStartGoalPoint();
   void publishOneStepPos(const int step);
   void generateAllResult(const double step_length);
+
+  std::vector<std::vector<std::pair<double, double>>> all_route_path_for_show_;
 
   //解决conflict中包含冲突
   bool conflictSolve(Conflict conflict);
@@ -101,6 +114,14 @@ public:
   bool twoResultPointConflict(const ResultPoint pt1, const ResultPoint pt2);
 
   void printAllResult();
+
+  bool assignTasks(const std::vector<int> &vehicles_init,
+                   const std::vector<int> &start,
+                   std::vector<int> &assign_result);
+  double calculatePathLength(const std::vector<int> &path);
+
+  //增加新订单后的callback函数
+  void newOrderCallback(const std_msgs::BoolConstPtr &msg_in);
   map_parser::MapParser *map_parser_ = nullptr;
 
   //地图中所有的node节点
