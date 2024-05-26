@@ -31,9 +31,6 @@ catkin_package(
   INCLUDE_DIRS
   include
   LIBRARIES
-  cbs_planner_ros
-  ecbs_planner_ros
-  sipp_planner_ros
   CATKIN_DEPENDS
   geometry_msgs
   roscpp
@@ -53,24 +50,6 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${TinyXML_INCLUDE_DIRS})
 
-# cbs
-# add_library(cbs_planner_ros src/cbs_ros.cpp)
-# add_dependencies(cbs_planner_ros ${${PROJECT_NAME}_EXPORTED_TARGETS}
-#                  ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(cbs_planner_ros ${Boost_LIBRARIES} ${catkin_LIBRARIES})
-
-# # ecbs
-# add_library(ecbs_planner_ros src/ecbs_ros.cpp)
-# add_dependencies(ecbs_planner_ros ${${PROJECT_NAME}_EXPORTED_TARGETS}
-#                  ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(ecbs_planner_ros ${Boost_LIBRARIES} ${catkin_LIBRARIES})
-
-# # sipp
-# add_library(sipp_planner_ros src/prioritized_sipp_ros.cpp)
-# add_dependencies(sipp_planner_ros ${${PROJECT_NAME}_EXPORTED_TARGETS}
-#                  ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(sipp_planner_ros ${Boost_LIBRARIES} ${catkin_LIBRARIES})
-
 # my_cbs
 add_executable(my_cbs_ros include/mapf_ros/my_cbs/path_finder_algorithm/dijkstra.cpp 
                           include/mapf_ros/my_cbs/parser.cpp 
@@ -78,19 +57,3 @@ add_executable(my_cbs_ros include/mapf_ros/my_cbs/path_finder_algorithm/dijkstra
 add_dependencies(my_cbs_ros ${${PROJECT_NAME}_EXPORTED_TARGETS}
                  ${catkin_EXPORTED_TARGETS})
 target_link_libraries(my_cbs_ros ${catkin_LIBRARIES} ${TinyXML_LIBRARIES})
-
-# install(
-#   TARGETS cbs_planner_ros ecbs_planner_ros sipp_planner_ros
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
-
-# install(FILES cbs_plugins.xml ecbs_plugins.xml sipp_plugins.xml
-#         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-
-# # Mark cpp header files for installation
-# install(
-#   DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING
-#   PATTERN "*.h")
