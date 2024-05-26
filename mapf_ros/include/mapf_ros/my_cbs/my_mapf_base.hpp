@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-20 21:22:25
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-04-20 21:58:08
+ * @LastEditTime: 2024-05-26 21:04:01
  */
 #pragma once
 
@@ -59,9 +59,6 @@ private:
 
   boost::thread *do_mapf_thread_;
   boost::thread *state_machine_thread_;
-
-  //   pluginlib::ClassLoader<mapf::MAPFROS> mapf_loader_;
-  //   boost::shared_ptr<mapf::MAPFROS> mapf_planner_;
 };
 
 } // namespace mapf

@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-14 22:57:43
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-24 13:01:54
+ * @LastEditTime: 2024-05-26 21:06:52
  */
 #include <ros/ros.h>
 
@@ -300,6 +300,7 @@ void MYCBSROS::newOrderCallback(const std_msgs::BoolConstPtr &msg_in) {
   double cost = 0;
   double time_tolerance = 5.0;
 
+  //新订单测试
   std::vector<int> start{55, 38};
   std::vector<int> goal{40, 13};
 
