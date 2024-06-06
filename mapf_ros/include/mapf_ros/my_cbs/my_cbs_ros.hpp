@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-30 22:30:32
+ * @LastEditTime: 2024-06-06 20:37:04
  */
 #pragma once
 
@@ -17,6 +17,7 @@
 #include <visualization_msgs/MarkerArray.h>
 
 #include <std_msgs/Bool.h>
+#include <std_msgs/String.h>
 
 // #include "mapf_ros/mapf_ros.hpp"
 #include "my_cbs.hpp"
@@ -25,6 +26,10 @@
 #include "parser.h"
 
 #include "path_finder_algorithm/dijkstra.h"
+
+//用于json的序列化和反序列化
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace mapf {
 
@@ -100,6 +105,8 @@ protected:
 
   ros::Subscriber sub_new_order_;
 
+  ros::Subscriber sub_order_from_web_;
+
   visualization_msgs::MarkerArray start_goal_points_;
   visualization_msgs::MarkerArray start_goal_texts_;
   visualization_msgs::MarkerArray one_step_pos_;
@@ -137,6 +144,8 @@ public:
 
   //增加新订单后的callback函数
   void newOrderCallback(const std_msgs::BoolConstPtr &msg_in);
+
+  void setOrderCallback(const std_msgs::StringConstPtr &msg_in);
   map_parser::MapParser *map_parser_ = nullptr;
 
   //地图中所有的node节点

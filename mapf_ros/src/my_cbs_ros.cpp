@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-14 22:57:43
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-30 22:39:57
+ * @LastEditTime: 2024-06-06 21:34:32
  */
 #include <ros/ros.h>
 
@@ -44,6 +44,9 @@ MYCBSROS::MYCBSROS(ros::NodeHandle *nh) : nh_(nh), initialized_(false) {
 
   sub_new_order_ =
       nh_->subscribe("/new_order", 5, &MYCBSROS::newOrderCallback, this);
+
+  sub_order_from_web_ =
+      nh_->subscribe("/setOrder", 5, &MYCBSROS::setOrderCallback, this);
 }
 
 MYCBSROS::MYCBSROS(std::string name) : initialized_(false) { initialize(name); }
@@ -387,6 +390,53 @@ void MYCBSROS::newOrderCallback(const std_msgs::BoolConstPtr &msg_in) {
   calculateAllPos();
 
   control_step_ = 0;
+}
+
+void MYCBSROS::setOrderCallback(const std_msgs::StringConstPtr &msg_in) {
+
+  std::istringstream is(msg_in->data);
+  boost::property_tree::ptree pt;
+  boost::property_tree::read_json(is, pt);
+
+  auto s = pt.get<std::string>("end");
+  //去掉中括号:"[]"
+  s.erase(s.begin());
+  s.erase(s.end() - 1);
+  //去掉大括号："{}"
+  s.erase(std::remove(s.begin(), s.end(), '{'), s.end());
+  s.erase(std::remove(s.begin(), s.end(), '}'), s.end());
+
+  std::cout << "s:" << s << std::endl;
+
+  std::istringstream iss(s);
+  std::vector<int> starts;
+  std::vector<int> goals;
+  std::string token;
+  int count = 0;
+
+  while (std::getline(iss, token, ',')) {
+    std::istringstream tokenStream(token);
+    int value;
+    if (tokenStream >> value) {
+      if (count % 2 == 0)
+        starts.push_back(value);
+      else
+        goals.push_back(value);
+
+      count++;
+    } else {
+      ROS_ERROR_STREAM("Failed to parse integer from token: " << token);
+    }
+  }
+
+  // std::cout << "starts size : " << starts.size() << std::endl;
+  // for (int i = 0; i < starts.size(); i++) {
+  //   std::cout << starts[i] << std::endl;
+  // }
+  // std::cout << "goals size : " << goals.size() << std::endl;
+  // for (int i = 0; i < goals.size(); i++) {
+  //   std::cout << goals[i] << std::endl;
+  // }
 }
 
 void MYCBSROS::calculateAllPos() {
