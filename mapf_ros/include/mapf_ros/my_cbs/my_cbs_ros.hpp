@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-24 12:51:34
+ * @LastEditTime: 2024-05-30 22:30:32
  */
 #pragma once
 
@@ -50,9 +50,10 @@ public:
 
   void initialize(std::string name);
 
-  bool makePlan(const std::vector<int> &start, const std::vector<int> &show,
-                const std::vector<int> &goal, mapf_msgs::GlobalPlan &plan,
-                double &cost, std::vector<std::vector<int>> &all_path_ids,
+  bool makePlan(const std::vector<int> &vehicle_init,
+                const std::vector<int> &start, const std::vector<int> &goal,
+                mapf_msgs::GlobalPlan &plan, double &cost,
+                std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance);
 
   void generatePlan(const std::vector<PlanResult<State, Action, int>> &solution,
@@ -67,17 +68,29 @@ protected:
 
   ros::NodeHandle *nh_;
 
-  //存储规划后的所有路径点
+  //存储规划后的所有路径点，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
   std::vector<std::vector<int>> all_path_ids_;
 
-  //存储规划后的结果
+  //存储规划后的结果，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
   std::vector<std::vector<ResultPoint>> all_results_;
 
-  //存储每一个机器人运动过程中的路径点
+  //存储每一个机器人运动过程中的路径点，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
   std::vector<std::vector<std::pair<double, double>>> all_pos_;
 
+  //所有车辆起始位置的id
+  std::vector<int> vehicle_init_ids_;
+  //所有任务起点位置的id
   std::vector<int> start_ids_;
+  //所有任务终点位置的id
   std::vector<int> goal_ids_;
+
+  //存储任务分配的结果
+  std::vector<int> task_assign_result_;
+
+  //存储每一个任务中，两个阶段切换的点的下标索引
+  std::vector<int> all_pos_switch_index_;
+
+  std::vector<int> final_switch_index_;
 
   ros::Publisher pub_start_goal_point_;
 
@@ -98,6 +111,8 @@ public:
   void publishStartGoalPoint();
   void publishOneStepPos(const int step);
   void generateAllResult(const double step_length);
+
+  void updateAllRoutePathForShow();
 
   std::vector<std::vector<std::pair<double, double>>> all_route_path_for_show_;
 
