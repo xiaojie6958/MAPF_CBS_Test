@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-03-17 11:26:22
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-05-19 23:45:04
+ * @LastEditTime: 2024-06-12 22:15:17
  */
 #include "parser.h"
 #include "path_finder_algorithm/dijkstra.h"
@@ -140,17 +140,17 @@ void MapParser::createNodes(TiXmlHandle *hRootNode, bool onlyFirstElement) {
 
   std::cout << "Point nums : " << map_nodes_.size() << std::endl;
 
-  std::cout << "Point 0 : " << map_nodes_[0].name << ", "
-            << map_nodes_[0].node_id << ", " << map_nodes_[0].x_pos << ", "
-            << map_nodes_[0].y_pos << ", " << map_nodes_[0].z_pos << ", "
-            << map_nodes_[0].yaw << ", " << map_nodes_[0].type << ", "
-            << map_nodes_[0].outgoing_path[0].name << ", "
-            << map_nodes_[0].outgoing_path[1].name << ", "
-            << map_nodes_[0].point_layout.x_pos << ", "
-            << map_nodes_[0].point_layout.y_pos << ", "
-            << map_nodes_[0].point_layout.x_label_offset << ", "
-            << map_nodes_[0].point_layout.y_label_offset << ", "
-            << map_nodes_[0].point_layout.layer_id << std::endl;
+  // std::cout << "Point 0 : " << map_nodes_[0].name << ", "
+  //           << map_nodes_[0].node_id << ", " << map_nodes_[0].x_pos << ", "
+  //           << map_nodes_[0].y_pos << ", " << map_nodes_[0].z_pos << ", "
+  //           << map_nodes_[0].yaw << ", " << map_nodes_[0].type << ", "
+  //           << map_nodes_[0].outgoing_path[0].name << ", "
+  //           << map_nodes_[0].outgoing_path[1].name << ", "
+  //           << map_nodes_[0].point_layout.x_pos << ", "
+  //           << map_nodes_[0].point_layout.y_pos << ", "
+  //           << map_nodes_[0].point_layout.x_label_offset << ", "
+  //           << map_nodes_[0].point_layout.y_label_offset << ", "
+  //           << map_nodes_[0].point_layout.layer_id << std::endl;
 }
 
 void MapParser::createPaths(TiXmlHandle *hRootWay, bool onlyFirstElement) {
@@ -209,17 +209,17 @@ void MapParser::createPaths(TiXmlHandle *hRootWay, bool onlyFirstElement) {
 
   std::cout << "Path nums : " << map_paths_.size() << std::endl;
 
-  std::cout << "path[0] : " << map_paths_[0].path_id << ", "
-            << map_paths_[0].source_node_name << ", "
-            << map_paths_[0].destination_node_name << ", "
-            << map_paths_[0].length << ", " << map_paths_[0].max_vel << ", "
-            << map_paths_[0].max_reverse_vel << ", " << map_paths_[0].locked
-            << ", " << map_paths_[0].path_layout.connection_type << ", "
-            << map_paths_[0].path_layout.layer_id << ", "
-            << map_paths_[0].path_layout.control_points[0].x << ", "
-            << map_paths_[0].path_layout.control_points[0].y << ", "
-            << map_paths_[0].path_layout.control_points[1].x << ", "
-            << map_paths_[0].path_layout.control_points[1].y << std::endl;
+  // std::cout << "path[0] : " << map_paths_[0].path_id << ", "
+  //           << map_paths_[0].source_node_name << ", "
+  //           << map_paths_[0].destination_node_name << ", "
+  //           << map_paths_[0].length << ", " << map_paths_[0].max_vel << ", "
+  //           << map_paths_[0].max_reverse_vel << ", " << map_paths_[0].locked
+  //           << ", " << map_paths_[0].path_layout.connection_type << ", "
+  //           << map_paths_[0].path_layout.layer_id << ", "
+  //           << map_paths_[0].path_layout.control_points[0].x << ", "
+  //           << map_paths_[0].path_layout.control_points[0].y << ", "
+  //           << map_paths_[0].path_layout.control_points[1].x << ", "
+  //           << map_paths_[0].path_layout.control_points[1].y << std::endl;
 }
 
 void MapParser::createNetwork() {

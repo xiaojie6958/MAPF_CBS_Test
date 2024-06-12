@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model version="0.0.4" name="unnamed">
+    <point name="Point-0001" xPosition="-750" yPosition="-1000" zPosition="0" vehicleOrientationAngle="270.0" type="HALT_POSITION">
+        <outgoingPath name="Point-0001 --- Point-0003"/>
+        <pointLayout xPosition="-750" yPosition="-1250" xLabelOffset="-10" yLabelOffset="-20" layerId="0"/>
+    </point>
+    <point name="Point-0002" xPosition="-750" yPosition="-4250" zPosition="0" vehicleOrientationAngle="270.0" type="HALT_POSITION">
+        <pointLayout xPosition="-750" yPosition="-4250" xLabelOffset="-10" yLabelOffset="-20" layerId="0"/>
+    </point>
+    <point name="Point-0003" xPosition="-750" yPosition="-2250" zPosition="0" vehicleOrientationAngle="270.0" type="HALT_POSITION">
+        <outgoingPath name="Point-0003 --- Point-0004"/>
+        <pointLayout xPosition="-750" yPosition="-2250" xLabelOffset="-10" yLabelOffset="-20" layerId="0"/>
+    </point>
+    <point name="Point-0004" xPosition="-750" yPosition="-3250" zPosition="0" vehicleOrientationAngle="270.0" type="HALT_POSITION">
+        <outgoingPath name="Point-0004 --- Point-0002"/>
+        <pointLayout xPosition="-750" yPosition="-3250" xLabelOffset="-10" yLabelOffset="-20" layerId="0"/>
+    </point>
+    <path name="Point-0001 --- Point-0003" sourcePoint="Point-0001" destinationPoint="Point-0003" length="1250" maxVelocity="1000" maxReverseVelocity="0" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"/>
+    </path>
+    <path name="Point-0003 --- Point-0004" sourcePoint="Point-0003" destinationPoint="Point-0004" length="1000" maxVelocity="1000" maxReverseVelocity="0" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"/>
+    </path>
+    <path name="Point-0004 --- Point-0002" sourcePoint="Point-0004" destinationPoint="Point-0002" length="1000" maxVelocity="1000" maxReverseVelocity="0" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"/>
+    </path>
+    <visualLayout name="VLayout" scaleX="50.0" scaleY="50.0">
+        <layer id="0" ordinal="0" visible="true" name="Default layer" groupId="0"/>
+        <layerGroup id="0" name="Default layer group" visible="true"/>
+    </visualLayout>
+    <property name="tcs:modelFileLastModified" value="2024-06-12T06:08:05Z"/>
+</model>
