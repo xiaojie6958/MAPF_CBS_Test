@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-06 20:37:04
+ * @LastEditTime: 2024-06-12 23:01:03
  */
 #pragma once
 
@@ -55,11 +55,13 @@ public:
 
   void initialize(std::string name);
 
-  bool makePlan(const std::vector<int> &vehicle_init,
-                const std::vector<int> &start, const std::vector<int> &goal,
-                mapf_msgs::GlobalPlan &plan, double &cost,
+  bool makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
                 std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance);
+
+  bool makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
+                std::vector<std::vector<int>> &all_path_ids,
+                const double &time_tolerance, bool real_car);
 
   void generatePlan(const std::vector<PlanResult<State, Action, int>> &solution,
                     const std::vector<int> &goal, mapf_msgs::GlobalPlan &plan,
@@ -67,6 +69,13 @@ public:
   ~MYCBSROS();
 
   int control_step_ = 0;
+
+  //所有车辆起始位置的id
+  std::vector<int> vehicle_init_ids_;
+  //所有任务起点位置的id
+  std::vector<int> start_ids_;
+  //所有任务终点位置的id
+  std::vector<int> goal_ids_;
 
 protected:
   bool initialized_;
@@ -81,13 +90,6 @@ protected:
 
   //存储每一个机器人运动过程中的路径点，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
   std::vector<std::vector<std::pair<double, double>>> all_pos_;
-
-  //所有车辆起始位置的id
-  std::vector<int> vehicle_init_ids_;
-  //所有任务起点位置的id
-  std::vector<int> start_ids_;
-  //所有任务终点位置的id
-  std::vector<int> goal_ids_;
 
   //存储任务分配的结果
   std::vector<int> task_assign_result_;
@@ -156,5 +158,7 @@ public:
   std::unordered_map<int, std::string> node_id_to_name_;
   //地图的拓扑结构
   std::vector<std::vector<float>> original_network_array_;
+
+  bool real_car_ = false;
 };
 } // namespace mapf

@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-14 22:57:43
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-06 21:34:32
+ * @LastEditTime: 2024-06-12 23:43:14
  */
 #include <ros/ros.h>
 
@@ -33,6 +33,16 @@ MYCBSROS::MYCBSROS(ros::NodeHandle *nh) : nh_(nh), initialized_(false) {
 
   node_id_to_name_ = map_parser_->node_id_to_name();
 
+  vehicle_init_ids_.clear();
+
+  start_ids_.clear();
+
+  goal_ids_.clear();
+
+  nh_->param<bool>("real_car", real_car_, false);
+
+  std::cout << "real car : " << real_car_ << std::endl;
+
   pub_start_goal_point_ =
       nh_->advertise<visualization_msgs::MarkerArray>("/start_gaol_points", 5);
 
@@ -59,36 +69,29 @@ void MYCBSROS::initialize(std::string name) {
   }
 }
 
-bool MYCBSROS::makePlan(const std::vector<int> &vehicle_init,
-                        const std::vector<int> &start,
-                        const std::vector<int> &goal,
-                        mapf_msgs::GlobalPlan &plan, double &cost,
+bool MYCBSROS::makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
                         std::vector<std::vector<int>> &all_path_ids,
                         const double &time_tolerance) {
   // until tf can handle transforming things that are way in the past... we'll
   // require the goal to be in our global frame
 
-  if (start.empty() || goal.empty()) {
-    ROS_ERROR("Start and goal vectors are empty!");
+  if (start_ids_.empty() || goal_ids_.empty() || vehicle_init_ids_.empty()) {
+    ROS_ERROR("Start or goal or vehicle_init vectors are empty!");
     return false;
   }
-  if (start.size() != goal.size()) {
+  if (start_ids_.size() != goal_ids_.size()) {
     ROS_ERROR("Start and goal vectors are not the same length!");
     return false;
   }
 
-  vehicle_init_ids_.clear();
-
-  vehicle_init_ids_ = vehicle_init;
-
   std::vector<int> assign_result;
 
   //先进行任务分配
-  assignTasks(vehicle_init, start, assign_result);
+  assignTasks(vehicle_init_ids_, start_ids_, assign_result);
 
   int agent_num = assign_result.size();
-  start_ids_ = start;
-  goal_ids_ = goal;
+  // start_ids_ = start;
+  // goal_ids_ = goal;
   // mapf env
   std::vector<State> startStates;
   std::vector<Location> goals;
@@ -99,7 +102,7 @@ bool MYCBSROS::makePlan(const std::vector<int> &vehicle_init,
     // transform to map form
     startStates.emplace_back(State(0, 0, 0, assign_result[i]));
 
-    goals.emplace_back(Location(0, 0, start[i]));
+    goals.emplace_back(Location(0, 0, start_ids_[i]));
 
   } // end for
 
@@ -122,7 +125,7 @@ bool MYCBSROS::makePlan(const std::vector<int> &vehicle_init,
 
   if (success) {
     cost = 0;
-    generatePlan(solution, goal, plan, cost);
+    generatePlan(solution, goal_ids_, plan, cost);
 
     all_path_ids.clear();
     for (int i = 0; i < solution.size(); ++i) {
@@ -154,10 +157,10 @@ bool MYCBSROS::makePlan(const std::vector<int> &vehicle_init,
 
   goals.clear();
 
-  for (int i = 0; i < start.size(); ++i) {
-    startStates.emplace_back(State(0, 0, 0, start[i]));
+  for (int i = 0; i < start_ids_.size(); ++i) {
+    startStates.emplace_back(State(0, 0, 0, start_ids_[i]));
 
-    goals.emplace_back(Location(0, 0, goal[i]));
+    goals.emplace_back(Location(0, 0, goal_ids_[i]));
   }
 
   std::vector<PlanResult<State, Action, int>> solution2;
@@ -178,7 +181,7 @@ bool MYCBSROS::makePlan(const std::vector<int> &vehicle_init,
 
   if (success2) {
     cost = 0;
-    generatePlan(solution2, goal, plan, cost);
+    generatePlan(solution2, goal_ids_, plan, cost);
 
     for (int i = 0; i < solution2.size(); ++i) {
       std::vector<int> path_id;
@@ -202,6 +205,82 @@ bool MYCBSROS::makePlan(const std::vector<int> &vehicle_init,
   }
 
   return (success && success2);
+}
+
+bool MYCBSROS::makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
+                        std::vector<std::vector<int>> &all_path_ids,
+                        const double &time_tolerance, bool real_car) {
+  if (start_ids_.empty() || goal_ids_.empty()) {
+    ROS_ERROR("Start or goal vectors are empty!");
+    return false;
+  }
+  if (start_ids_.size() != goal_ids_.size()) {
+    ROS_ERROR("Start and goal vectors are not the same length!");
+    return false;
+  }
+
+  int agent_num = start_ids_.size();
+
+  // mapf env
+  std::vector<State> startStates;
+  std::vector<Location> goals;
+
+  //先求取车辆起始位置到相应任务起点的路径
+  // get agents start pose in world frame
+  for (int i = 0; i < agent_num; ++i) {
+    // transform to map form
+    startStates.emplace_back(State(0, 0, 0, start_ids_[i]));
+
+    goals.emplace_back(Location(0, 0, goal_ids_[i]));
+
+  } // end for
+
+  // mapf search
+
+  std::vector<PlanResult<State, Action, int>> solution;
+
+  Environment mapf(goals, map_nodes_, node_name_to_id_, node_id_to_name_,
+                   original_network_array_);
+  MYCBS<State, Action, int, Conflict, Constraints, Environment> my_cbs(mapf);
+
+  Timer timer;
+  bool success = my_cbs.search(startStates, solution, time_tolerance);
+  // check time tolerance
+  timer.stop();
+  if (timer.elapsedSeconds() > time_tolerance) {
+    ROS_ERROR("Planning time out! Cur time tolerance is %lf", time_tolerance);
+    return false;
+  }
+
+  if (success) {
+    cost = 0;
+    generatePlan(solution, goal_ids_, plan, cost);
+
+    all_path_ids.clear();
+    for (int i = 0; i < solution.size(); ++i) {
+      all_pos_switch_index_.emplace_back(solution[i].states.size());
+      std::vector<int> path_id;
+      path_id.clear();
+      for (int j = 0; j < solution[i].states.size(); j++) {
+        path_id.emplace_back(solution[i].states[j].first.id);
+      }
+      all_path_ids.emplace_back(path_id);
+    }
+
+    all_path_ids_.clear();
+    all_path_ids_ = all_path_ids;
+
+    // calculateAllPos();
+
+    ROS_DEBUG_STREAM("Planning successful!");
+    ROS_DEBUG_STREAM("runtime: " << timer.elapsedSeconds());
+    ROS_DEBUG_STREAM("cost: " << cost);
+    ROS_DEBUG_STREAM("makespan(involve start & end): " << plan.makespan);
+  } else {
+    ROS_ERROR("Planning NOT successful!");
+  }
+
+  return success;
 }
 
 void MYCBSROS::generatePlan(
@@ -365,7 +444,7 @@ void MYCBSROS::newOrderCallback(const std_msgs::BoolConstPtr &msg_in) {
   std::vector<int> start{55, 38};
   std::vector<int> goal{40, 13};
 
-  makePlan(start, start, goal, plan, cost, all_path_ids, time_tolerance);
+  makePlan(plan, cost, all_path_ids, time_tolerance);
 
   std::cout << "Plan result : " << std::endl;
 
@@ -429,14 +508,18 @@ void MYCBSROS::setOrderCallback(const std_msgs::StringConstPtr &msg_in) {
     }
   }
 
-  // std::cout << "starts size : " << starts.size() << std::endl;
-  // for (int i = 0; i < starts.size(); i++) {
-  //   std::cout << starts[i] << std::endl;
-  // }
-  // std::cout << "goals size : " << goals.size() << std::endl;
-  // for (int i = 0; i < goals.size(); i++) {
-  //   std::cout << goals[i] << std::endl;
-  // }
+  start_ids_ = starts;
+
+  goal_ids_ = goals;
+
+  std::cout << "starts size : " << starts.size() << std::endl;
+  for (int i = 0; i < starts.size(); i++) {
+    std::cout << starts[i] << std::endl;
+  }
+  std::cout << "goals size : " << goals.size() << std::endl;
+  for (int i = 0; i < goals.size(); i++) {
+    std::cout << goals[i] << std::endl;
+  }
 }
 
 void MYCBSROS::calculateAllPos() {
@@ -506,7 +589,8 @@ void MYCBSROS::publishOneStepPos(const int step) {
   text_marker.color.g = 0.0;
   text_marker.color.b = 0.0;
   text_marker.color.a = 1.0;
-  for (int i = 0; i < all_pos_.size(); i++) {
+
+  for (int i = 0; i < vehicle_init_ids_.size(); i++) {
     point_marker.header.seq = count;
     point_marker.id = count;
     if (count % 3 == 0) {
@@ -526,7 +610,10 @@ void MYCBSROS::publishOneStepPos(const int step) {
       point_marker.color.a = 1.0;
     }
     point_marker.color.a = 0.8;
-    if (step >= all_pos_[i].size()) {
+    if (step == -1) {
+      point_marker.pose.position.x = map_nodes_[vehicle_init_ids_[i]].x_pos;
+      point_marker.pose.position.y = map_nodes_[vehicle_init_ids_[i]].y_pos;
+    } else if (step >= all_pos_[i].size()) {
       point_marker.pose.position.x = all_pos_[i].back().first;
       point_marker.pose.position.y = all_pos_[i].back().second;
     } else {
@@ -539,7 +626,11 @@ void MYCBSROS::publishOneStepPos(const int step) {
 
     text_marker.header.seq = count;
     text_marker.id = count;
-    if (step >= all_pos_[i].size()) {
+    if (step == -1) {
+      text_marker.pose.position.x = map_nodes_[vehicle_init_ids_[i]].x_pos;
+      text_marker.pose.position.y = map_nodes_[vehicle_init_ids_[i]].y_pos;
+      text_marker.pose.position.z = 0.0;
+    } else if (step >= all_pos_[i].size()) {
       text_marker.pose.position.x = all_pos_[i].back().first;
       text_marker.pose.position.y = all_pos_[i].back().second;
       text_marker.pose.position.z = 0.0;
@@ -548,8 +639,18 @@ void MYCBSROS::publishOneStepPos(const int step) {
       text_marker.pose.position.y = all_pos_[i][step].second;
       text_marker.pose.position.z = 0.0;
     }
-    text_marker.text = "V" + std::to_string(task_assign_result_[i]);
+
+    if (real_car_ == false) {
+      if (step == -1) {
+        text_marker.text = "V" + std::to_string(i);
+      } else
+        text_marker.text = "V" + std::to_string(task_assign_result_[i]);
+    } else {
+      text_marker.text = "V" + std::to_string(i);
+    }
+
     count++;
+
     one_step_pos_.markers.emplace_back(text_marker);
   }
 
@@ -1022,8 +1123,29 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "my_cbs_test_node");
   ros::NodeHandle nh("~");
   mapf::MYCBSROS my_cbs_ros(&nh);
+
   //车辆的初始位置
-  std::vector<int> vehicles_init{11, 13, 20, 31}; //{1, 2, 3, 4}
+  std::vector<int> vehicles_init; //{1, 2, 3, 4}
+
+  if (my_cbs_ros.real_car_ == false) {
+    vehicles_init = {11, 13, 20, 31};
+  } else {
+    vehicles_init = {0};
+  }
+
+  my_cbs_ros.vehicle_init_ids_ = vehicles_init;
+
+  ros::Rate loop(10); // 10hz的循环频率
+
+  std::cout << "waiting order cmd..." << std::endl;
+  while (my_cbs_ros.start_ids_.empty() && ros::ok()) {
+    //显示地图
+    my_cbs_ros.map_parser_->publishMapArray();
+    my_cbs_ros.map_parser_->publishMapArrow();
+    my_cbs_ros.publishOneStepPos(-1);
+    ros::spinOnce();
+    loop.sleep();
+  }
   //{0, 5, 2, 16, 55, 38}
   //一系列的起始位置
   // std::vector<int> start{3, 5, 2, 16}; // 0,5,2,16
@@ -1034,6 +1156,9 @@ int main(int argc, char **argv) {
   //{32, 10, 9, 29, 40, 13}
   //一系列的终点位置
   std::vector<int> goal{1, 2, 3, 4}; //{12, 16, 47, 53}
+
+  // my_cbs_ros.start_ids_ = start;
+  // my_cbs_ros.goal_ids_ = goal;
 
   // std::vector<int> assign_result;
 
@@ -1049,8 +1174,11 @@ int main(int argc, char **argv) {
   double time_tolerance = 5.0;
 
   double time = ros::Time::now().toSec();
-  my_cbs_ros.makePlan(vehicles_init, start, goal, plan, cost, all_path_ids,
-                      time_tolerance);
+  if (my_cbs_ros.real_car_ == false)
+    my_cbs_ros.makePlan(plan, cost, all_path_ids, time_tolerance);
+  else
+    my_cbs_ros.makePlan(plan, cost, all_path_ids, time_tolerance,
+                        my_cbs_ros.real_car_);
 
   std::cout << "Plan result : " << std::endl;
 
@@ -1096,7 +1224,7 @@ int main(int argc, char **argv) {
     my_cbs_ros.control_step_ = my_cbs_ros.control_step_ + 1;
 
     // if (path_found) {
-    //   map_parser.publishRouteNetwork(path_ids);
+    // map_parser.publishRouteNetwork(path_ids);
     // }
     ros::spinOnce();
     loop_rate.sleep(); // sleep 0.1s
