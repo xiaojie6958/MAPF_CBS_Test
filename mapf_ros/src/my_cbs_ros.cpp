@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-14 22:57:43
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-12 23:43:14
+ * @LastEditTime: 2024-06-20 21:07:57
  */
 #include <ros/ros.h>
 
@@ -508,18 +508,25 @@ void MYCBSROS::setOrderCallback(const std_msgs::StringConstPtr &msg_in) {
     }
   }
 
-  start_ids_ = starts;
+  // start_ids_ = starts;
 
-  goal_ids_ = goals;
+  // goal_ids_ = goals;
+  //订单触发调度任务，首次触发和非首次触发处理不同
+  if (car_running_ == true) {
+    newOrderComeIn(starts, goals);
+  } else {
+    firstOrderComeIn(starts, goals);
+    car_running_ = true;
+  }
 
-  std::cout << "starts size : " << starts.size() << std::endl;
-  for (int i = 0; i < starts.size(); i++) {
-    std::cout << starts[i] << std::endl;
-  }
-  std::cout << "goals size : " << goals.size() << std::endl;
-  for (int i = 0; i < goals.size(); i++) {
-    std::cout << goals[i] << std::endl;
-  }
+  // std::cout << "starts size : " << starts.size() << std::endl;
+  // for (int i = 0; i < starts.size(); i++) {
+  //   std::cout << starts[i] << std::endl;
+  // }
+  // std::cout << "goals size : " << goals.size() << std::endl;
+  // for (int i = 0; i < goals.size(); i++) {
+  //   std::cout << goals[i] << std::endl;
+  // }
 }
 
 void MYCBSROS::calculateAllPos() {
@@ -1112,6 +1119,147 @@ double MYCBSROS::calculatePathLength(const std::vector<int> &path) {
   return length;
 }
 
+void MYCBSROS::firstOrderComeIn(const std::vector<int> &start,
+                                const std::vector<int> &goal) {
+
+  start_ids_ = start;
+  goal_ids_ = goal;
+
+  mapf_msgs::GlobalPlan plan;
+
+  std::vector<std::vector<int>> all_path_ids;
+
+  double cost = 0;
+  double time_tolerance = 5.0;
+  double time = ros::Time::now().toSec();
+
+  if (real_car_ == false) {
+    makePlan(plan, cost, all_path_ids, time_tolerance);
+  } else {
+    makePlan(plan, cost, all_path_ids, time_tolerance, real_car_);
+  }
+
+  generateAllResult(0.2);
+
+  mapf::MYCBSROS::Conflict conflict;
+
+  while (firstConflictDetect(conflict) == true) {
+    conflictSolve(conflict);
+  }
+
+  printAllResult();
+
+  calculateAllPos();
+}
+
+void MYCBSROS::newOrderComeIn(const std::vector<int> &start,
+                              const std::vector<int> &goal) {
+  //第一步：保存现有的all_results_;
+  auto original_all_results = all_results_;
+
+  //新订单来临之后，存储原有机器人的新起点
+  std::vector<ResultPoint> original_new_start_points;
+  original_new_start_points.clear();
+  original_new_start_points.resize(all_results_.size());
+
+  std::vector<int> original_next_index;
+  original_next_index.resize(all_results_.size());
+  int point_count = map_nodes_.size();
+
+  for (int i = 0; i < all_results_.size(); i++) {
+    if (control_step_ - 1 >= all_pos_[i].size()) {
+      ResultPoint pt;
+      pt.cost = 0;
+      pt.wait_time = 0;
+      pt.point_id = -1;
+      pt.x_y = std::make_pair(-1, -1);
+      original_new_start_points[i] = pt;
+      original_next_index[i] = -1;
+      continue;
+    }
+    ResultPoint pt;
+    pt.cost = 0;
+    pt.wait_time = 0;
+    pt.x_y = all_pos_[i][control_step_ - 1];
+    pt.point_id = point_count++;
+    original_new_start_points[i] = pt;
+    for (int j = 0; j < all_results_[i].size() - 1; j++) {
+      if (control_step_ - 1 > all_results_[i][j].cost) {
+        original_next_index[i] = j + 1;
+      }
+    }
+  }
+
+  original_all_results.clear();
+  for (int i = 0; i < all_results_.size(); i++) {
+    if (original_next_index[i] == -1)
+      continue;
+
+    std::vector<ResultPoint> one_path;
+    one_path.clear();
+    one_path.emplace_back(original_new_start_points[i]);
+    one_path.insert(one_path.end(),
+                    all_results_[i].begin() + original_next_index[i],
+                    all_results_[i].end());
+    original_all_results.emplace_back(one_path);
+  }
+
+  //更新original_all_results里的cost!!!
+  for (int i = 0; i < original_all_results.size(); i++) {
+    for (int j = 1; j < original_all_results[i].size(); j++) {
+      double length = std::hypot(original_all_results[i][j].x_y.first -
+                                     original_all_results[i][j - 1].x_y.first,
+                                 original_all_results[i][j].x_y.second -
+                                     original_all_results[i][j - 1].x_y.second);
+      int expand_step = std::ceil(length / 0.2);
+
+      original_all_results[i][j].cost =
+          original_all_results[i][j - 1].cost + expand_step;
+    }
+  }
+
+  //第二步：将已有的路径截掉走过的路径，重新保存all_path_ids_
+
+  //第三步：重新规划新传进来的任务
+
+  //第四步：将原来的all_path_ids_存入新的all_path_ids_
+
+  mapf_msgs::GlobalPlan plan;
+  std::vector<std::vector<int>> all_path_ids;
+  double cost = 0;
+  double time_tolerance = 5.0;
+
+  //新订单测试
+  std::vector<int> starts{55, 38};
+  std::vector<int> goals{40, 13};
+
+  makePlan(plan, cost, all_path_ids, time_tolerance);
+
+  std::cout << "Plan result : " << std::endl;
+
+  generateAllResult(0.2);
+
+  //把两个部分合并
+  all_results_.insert(all_results_.begin(), original_all_results.begin(),
+                      original_all_results.end());
+
+  generateAllRoutePathForShow();
+
+  //第五步：进行冲突检测及冲突消解
+  mapf::MYCBSROS::Conflict conflict;
+  while (firstConflictDetect(conflict) == true) {
+
+    conflictSolve(conflict);
+  }
+
+  printAllResult();
+
+  //第六步：重新计算新的all_pos_
+  calculateAllPos();
+
+  control_step_ = 0;
+}
+
 MYCBSROS::~MYCBSROS() {
   delete map_parser_;
   ROS_INFO("Exit MYCBS planner.");
@@ -1152,10 +1300,10 @@ int main(int argc, char **argv) {
   // //{32, 10, 9, 29, 40, 13}
   // //一系列的终点位置
   // std::vector<int> goal{32, 10, 9, 29};
-  std::vector<int> start{12, 16, 47, 53}; //{11, 13, 20, 31}
-  //{32, 10, 9, 29, 40, 13}
-  //一系列的终点位置
-  std::vector<int> goal{1, 2, 3, 4}; //{12, 16, 47, 53}
+  // std::vector<int> start{12, 16, 47, 53}; //{11, 13, 20, 31}
+  // //{32, 10, 9, 29, 40, 13}
+  // //一系列的终点位置
+  // std::vector<int> goal{1, 2, 3, 4}; //{12, 16, 47, 53}
 
   // my_cbs_ros.start_ids_ = start;
   // my_cbs_ros.goal_ids_ = goal;
@@ -1168,43 +1316,44 @@ int main(int argc, char **argv) {
 
   // start = assign_result;
 
-  mapf_msgs::GlobalPlan plan;
-  std::vector<std::vector<int>> all_path_ids;
-  double cost = 0;
-  double time_tolerance = 5.0;
+  // mapf_msgs::GlobalPlan plan;
+  // std::vector<std::vector<int>> all_path_ids;
+  // double cost = 0;
+  // double time_tolerance = 5.0;
 
-  double time = ros::Time::now().toSec();
-  if (my_cbs_ros.real_car_ == false)
-    my_cbs_ros.makePlan(plan, cost, all_path_ids, time_tolerance);
-  else
-    my_cbs_ros.makePlan(plan, cost, all_path_ids, time_tolerance,
-                        my_cbs_ros.real_car_);
+  // double time = ros::Time::now().toSec();
+  // if (my_cbs_ros.real_car_ == false)
+  //   my_cbs_ros.makePlan(plan, cost, all_path_ids, time_tolerance);
+  // else
+  //   my_cbs_ros.makePlan(plan, cost, all_path_ids, time_tolerance,
+  //                       my_cbs_ros.real_car_);
 
-  std::cout << "Plan result : " << std::endl;
+  // std::cout << "Plan result : " << std::endl;
 
-  for (int i = 0; i < plan.global_plan.size(); ++i) {
-    std::cout << "plan[" << i << "] : ";
-    for (int j = 0; j < plan.global_plan[i].plan.poses.size(); ++j) {
-      std::cout << "(" << plan.global_plan[i].plan.poses[j].pose.position.x
-                << ", " << plan.global_plan[i].plan.poses[j].pose.position.y
-                << "), ";
-    }
-    std::cout << std::endl;
-  }
+  // for (int i = 0; i < plan.global_plan.size(); ++i) {
+  //   std::cout << "plan[" << i << "] : ";
+  //   for (int j = 0; j < plan.global_plan[i].plan.poses.size(); ++j) {
+  //     std::cout << "(" << plan.global_plan[i].plan.poses[j].pose.position.x
+  //               << ", " << plan.global_plan[i].plan.poses[j].pose.position.y
+  //               << "), ";
+  //   }
+  //   std::cout << std::endl;
+  // }
 
-  my_cbs_ros.generateAllResult(0.2);
+  // my_cbs_ros.generateAllResult(0.2);
 
-  mapf::MYCBSROS::Conflict conflict;
-  while (my_cbs_ros.firstConflictDetect(conflict) == true) {
+  // mapf::MYCBSROS::Conflict conflict;
+  // while (my_cbs_ros.firstConflictDetect(conflict) == true) {
 
-    my_cbs_ros.conflictSolve(conflict);
-  }
+  //   my_cbs_ros.conflictSolve(conflict);
+  // }
 
-  std::cout << "Plan time : " << ros::Time::now().toSec() - time << std::endl;
+  // std::cout << "Plan time : " << ros::Time::now().toSec() - time <<
+  // std::endl;
 
-  my_cbs_ros.printAllResult();
+  // my_cbs_ros.printAllResult();
 
-  my_cbs_ros.calculateAllPos();
+  // my_cbs_ros.calculateAllPos();
 
   ros::Rate loop_rate(10);
   my_cbs_ros.control_step_ = 0;

@@ -258,6 +258,14 @@
         <outgoingPath name="Point-0061 --- Point-0021"/>
         <pointLayout xPosition="-24000" yPosition="-15000" xLabelOffset="-10" yLabelOffset="-20" layerId="0"/>
     </point>
+    <point name="Point-0062" xPosition="22000" yPosition="-21000" zPosition="0" vehicleOrientationAngle="NaN" type="HALT_POSITION">
+        <outgoingPath name="Point-0062 --- Point-0013"/>
+        <pointLayout xPosition="22000" yPosition="-21000" xLabelOffset="-10" yLabelOffset="-20" layerId="0"/>
+    </point>
+    <point name="Point-0063" xPosition="-27750" yPosition="2750" zPosition="0" vehicleOrientationAngle="NaN" type="HALT_POSITION">
+        <outgoingPath name="Point-0063 --- Point-0025"/>
+        <pointLayout xPosition="-27750" yPosition="2750" xLabelOffset="-10" yLabelOffset="-20" layerId="0"/>
+    </point>
     <path name="Point-0001 --- Point-0002" sourcePoint="Point-0001" destinationPoint="Point-0002" length="4383" maxVelocity="1000" maxReverseVelocity="0" locked="false">
         <pathLayout connectionType="BEZIER" layerId="0">
             <controlPoint x="610" y="-180"/>
@@ -591,6 +599,12 @@
         </pathLayout>
     </path>
     <path name="Point-0061 --- Point-0021" sourcePoint="Point-0061" destinationPoint="Point-0021" length="8000" maxVelocity="1000" maxReverseVelocity="0" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"/>
+    </path>
+    <path name="Point-0062 --- Point-0013" sourcePoint="Point-0062" destinationPoint="Point-0013" length="7211" maxVelocity="1000" maxReverseVelocity="0" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"/>
+    </path>
+    <path name="Point-0063 --- Point-0025" sourcePoint="Point-0063" destinationPoint="Point-0025" length="4242" maxVelocity="1000" maxReverseVelocity="0" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0"/>
     </path>
     <vehicle name="Vehicle-01" length="1000" energyLevelCritical="30" energyLevelGood="90" energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="45" maxVelocity="1000" maxReverseVelocity="1000">

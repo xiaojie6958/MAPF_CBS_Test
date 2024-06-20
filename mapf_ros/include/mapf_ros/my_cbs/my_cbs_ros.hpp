@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-12 23:01:03
+ * @LastEditTime: 2024-06-20 21:27:51
  */
 #pragma once
 
@@ -50,6 +50,33 @@ public:
     std::pair<int, int> conflict_id;
     std::pair<int, int> point_ids;
   };
+  //对调度系统中的车辆进行定义
+  struct Vehicle {
+    int car_id;
+    int car_status;
+    int task_id;
+    double x_pose;
+    double y_pose;
+  };
+
+  //对调度系统中的任务进行定义
+  struct Task {
+    int task_id;
+    int task_start_id;
+    int task_goal_id;
+    int task_status;
+    int execution_car_id;
+  };
+
+  //对调度系统中的车库进行定义
+  struct Garage {
+    //车库本身的编号id
+    int garage_id;
+    //车库所在路网地图中的路点id号
+    int map_point_id;
+    //停靠在车库中的车辆的索引
+    std::vector<int> parking_vehicle_index;
+  };
   MYCBSROS(ros::NodeHandle *nh);
   MYCBSROS(std::string name);
 
@@ -76,6 +103,13 @@ public:
   std::vector<int> start_ids_;
   //所有任务终点位置的id
   std::vector<int> goal_ids_;
+
+  //车辆的列表
+  std::vector<Vehicle> vehicle_list_;
+  //任务列表
+  std::vector<Task> task_list_;
+  //车库列表
+  std::vector<Garage> garage_list_;
 
 protected:
   bool initialized_;
@@ -114,6 +148,12 @@ protected:
   visualization_msgs::MarkerArray one_step_pos_;
 
   void generateAllRoutePathForShow();
+
+  void firstOrderComeIn(const std::vector<int> &start,
+                        const std::vector<int> &goal);
+
+  void newOrderComeIn(const std::vector<int> &start,
+                      const std::vector<int> &goal);
 
 public:
   void calculateAllPos();
@@ -158,7 +198,9 @@ public:
   std::unordered_map<int, std::string> node_id_to_name_;
   //地图的拓扑结构
   std::vector<std::vector<float>> original_network_array_;
-
+  //实车测试标志
   bool real_car_ = false;
+  //是否有车辆在调度中运行
+  bool car_running_ = false;
 };
 } // namespace mapf
