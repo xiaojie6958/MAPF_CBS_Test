@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-20 21:27:51
+ * @LastEditTime: 2024-06-20 23:51:44
  */
 #pragma once
 
@@ -53,7 +53,9 @@ public:
   //对调度系统中的车辆进行定义
   struct Vehicle {
     int car_id;
+    // 1-在车库等待召唤；2-在执行任务中
     int car_status;
+    int garage_id;
     int task_id;
     double x_pose;
     double y_pose;
@@ -64,6 +66,7 @@ public:
     int task_id;
     int task_start_id;
     int task_goal_id;
+    // 1-任务待接单状态；2-任务正在进行状态；3-任务已完成状态
     int task_status;
     int execution_car_id;
   };
@@ -82,8 +85,8 @@ public:
 
   void initialize(std::string name);
 
-  bool makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
-                std::vector<std::vector<int>> &all_path_ids,
+  bool makePlan(const std::vector<Task> tast, mapf_msgs::GlobalPlan &plan,
+                double &cost, std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance);
 
   bool makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
@@ -159,7 +162,8 @@ public:
   void calculateAllPos();
   void publishStartGoalPoint();
   void publishOneStepPos(const int step);
-  void generateAllResult(const double step_length);
+  void generateAllResult(const std::vector<std::vector<int>> all_path_ids,
+                         const double step_length);
 
   void updateAllRoutePathForShow();
 

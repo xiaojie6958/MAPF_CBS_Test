@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-03-17 11:26:22
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-12 22:15:17
+ * @LastEditTime: 2024-06-20 23:56:35
  */
 #include "parser.h"
 #include "path_finder_algorithm/dijkstra.h"
@@ -455,6 +455,36 @@ void MapParser::publishMapArray() {
     drawCenterLine(map_paths_[i], id_count);
     id_count++;
   }
+
+  //画停车库
+
+  visualization_msgs::Marker point_marker;
+  point_marker.header.frame_id = "world";
+  point_marker.header.stamp = ros::Time::now();
+  point_marker.ns = "map_garage";
+  point_marker.action = visualization_msgs::Marker::ADD;
+  point_marker.type = visualization_msgs::Marker::CUBE;
+  point_marker.id = id_count++;
+  point_marker.lifetime = ros::Duration(0);
+  // Scale
+  point_marker.scale.x = 4.5;
+  point_marker.scale.y = 4.5;
+  point_marker.scale.z = 0.5;
+  // Color
+  point_marker.color.r = 0.0;
+  point_marker.color.g = 1.0;
+  point_marker.color.b = 0.0;
+  point_marker.color.a = 0.5;
+
+  point_marker.pose.position.x = map_nodes_.back().x_pos;
+  point_marker.pose.position.y = map_nodes_.back().y_pos;
+  map_marker_array.markers.emplace_back(point_marker);
+
+  point_marker.id = id_count++;
+  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 2].x_pos;
+  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 2].y_pos;
+  map_marker_array.markers.emplace_back(point_marker);
+
   map_pub.publish(map_marker_array);
 }
 
