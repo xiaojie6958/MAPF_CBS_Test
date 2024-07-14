@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-03-17 11:26:22
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-20 23:56:35
+ * @LastEditTime: 2024-07-05 00:39:01
  */
 #include "parser.h"
 #include "path_finder_algorithm/dijkstra.h"
@@ -602,7 +602,7 @@ void MapParser::drawOneRoutePath(
   path_line.action = visualization_msgs::Marker::ADD;
   path_line.type = visualization_msgs::Marker::LINE_STRIP;
   path_line.id = count_id;
-  path_line.lifetime = ros::Duration(0);
+  path_line.lifetime = ros::Duration(0.5);
   // Scale
   path_line.scale.x = 0.5;
   path_line.scale.y = 0.5;

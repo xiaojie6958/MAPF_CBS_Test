@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-06-20 23:51:44
+ * @LastEditTime: 2024-07-14 23:11:14
  */
 #pragma once
 
@@ -36,9 +36,13 @@ namespace mapf {
 class MYCBSROS {
 public:
   struct ResultPoint {
+    //路点在路网地图中的索引下标
     int point_id;
+    //路点的代价
     int cost;
+    //在该路点的等待时间
     int wait_time;
+    //路点的x,y位置坐标
     std::pair<double, double> x_y;
 
     ResultPoint() {
@@ -52,22 +56,30 @@ public:
   };
   //对调度系统中的车辆进行定义
   struct Vehicle {
+    //车辆的id号
     int car_id;
-    // 1-在车库等待召唤；2-在执行任务中
+    // 1-在车库等待召唤；2-在执行任务中;3-执行任务完成，返回车库中
     int car_status;
+    //车辆停泊的车库id
     int garage_id;
+    //车辆正在执行的任务id
     int task_id;
+    //车辆的x,y坐标
     double x_pose;
     double y_pose;
   };
 
   //对调度系统中的任务进行定义
   struct Task {
+    //任务的id号
     int task_id;
+    //任务的起始位置在路网地图中的索引下标
     int task_start_id;
+    //任务终点位置在路网地图中的索引下标
     int task_goal_id;
     // 1-任务待接单状态；2-任务正在进行状态；3-任务已完成状态
     int task_status;
+    //任务执行的车辆id号
     int execution_car_id;
   };
 
@@ -85,10 +97,13 @@ public:
 
   void initialize(std::string name);
 
-  bool makePlan(const std::vector<Task> tast, mapf_msgs::GlobalPlan &plan,
+  bool makePlan(const std::vector<Task> task, mapf_msgs::GlobalPlan &plan,
                 double &cost, std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance);
-
+  bool makePlan(const Task task, mapf_msgs::GlobalPlan &plan, double &cost,
+                std::vector<std::vector<int>> &all_path_ids,
+                const double &time_tolerance);
+  //【仅在实际车辆测试时使用】
   bool makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
                 std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance, bool real_car);
@@ -131,9 +146,9 @@ protected:
   //存储任务分配的结果
   std::vector<int> task_assign_result_;
 
-  //存储每一个任务中，两个阶段切换的点的下标索引
+  //存储每一个任务中，两个阶段切换的点的下标索引（all_results_中的下标索引）
   std::vector<int> all_pos_switch_index_;
-
+  //存储每一个任务中，两个阶段切换的点的下标索引（all_pos_中的下标索引）
   std::vector<int> final_switch_index_;
 
   ros::Publisher pub_start_goal_point_;
@@ -157,6 +172,10 @@ protected:
 
   void newOrderComeIn(const std::vector<int> &start,
                       const std::vector<int> &goal);
+
+  void backToGarage(const int task_id);
+
+  int findNextId(const int task_id);
 
 public:
   void calculateAllPos();
@@ -188,7 +207,7 @@ public:
                    std::vector<int> &assign_result);
   double calculatePathLength(const std::vector<int> &path);
 
-  //增加新订单后的callback函数
+  //增加新订单后的callback函数【未使用】
   void newOrderCallback(const std_msgs::BoolConstPtr &msg_in);
 
   void setOrderCallback(const std_msgs::StringConstPtr &msg_in);
