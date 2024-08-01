@@ -14,7 +14,6 @@ find_package(
              geometry_msgs
              sensor_msgs
              mapf_msgs
-             costmap_2d
              tf2_geometry_msgs
              tf2_ros
              move_base_msgs
@@ -39,7 +38,6 @@ catkin_package(
   std_msgs
   nav_msgs
   mapf_msgs
-  costmap_2d
   tf2_geometry_msgs
   tf2_ros
   move_base_msgs

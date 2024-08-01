@@ -4,14 +4,12 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:59:03
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-07-14 23:11:14
+ * @LastEditTime: 2024-08-02 00:28:51
  */
 #pragma once
 
 #include <ros/ros.h>
 
-#include <costmap_2d/costmap_2d.h>
-#include <costmap_2d/costmap_2d_ros.h>
 #include <nav_msgs/Path.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -19,7 +17,6 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
 
-// #include "mapf_ros/mapf_ros.hpp"
 #include "my_cbs.hpp"
 #include "my_cbs_env.hpp"
 
@@ -157,8 +154,6 @@ protected:
 
   ros::Publisher pub_one_step_pos_;
 
-  ros::Subscriber sub_new_order_;
-
   ros::Subscriber sub_order_from_web_;
 
   visualization_msgs::MarkerArray start_goal_points_;
@@ -206,9 +201,6 @@ public:
                    const std::vector<int> &start,
                    std::vector<int> &assign_result);
   double calculatePathLength(const std::vector<int> &path);
-
-  //增加新订单后的callback函数【未使用】
-  void newOrderCallback(const std_msgs::BoolConstPtr &msg_in);
 
   void setOrderCallback(const std_msgs::StringConstPtr &msg_in);
   map_parser::MapParser *map_parser_ = nullptr;

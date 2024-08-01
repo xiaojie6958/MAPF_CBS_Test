@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-04-06 22:58:22
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-04-21 23:06:31
+ * @LastEditTime: 2024-08-02 00:35:34
  */
 #pragma once
 
@@ -30,7 +30,6 @@ struct State {
 
   friend std::ostream &operator<<(std::ostream &os, const State &s) {
     return os << s.time << ": (" << s.x << "," << s.y << ")";
-    // return os << "(" << s.x << "," << s.y << ")";
   }
 
   double time;
@@ -255,24 +254,6 @@ public:
   Environment(const Environment &) = delete;
   Environment &operator=(const Environment &) = delete;
 
-  // void setLowLevelContext(size_t agentIdx, const Constraints *constraints) {
-  //   assert(constraints); // NOLINT
-  //   m_constraints_ = constraints;
-  //   m_lastGoalConstraint_ = -1;
-  //   for (const auto &vc : constraints->vertexConstraints) {
-  //     if (vc.x == m_goals_[m_agentIdx_].x && vc.y == m_goals_[m_agentIdx_].y)
-  //     {
-  //       m_lastGoalConstraint_ = std::max(m_lastGoalConstraint_, vc.time);
-  //     }
-  //   }
-  // }
-
-  // bool isSolution(const State &s) {
-  //   return s.x == m_goals_[m_agentIdx_].x && s.y == m_goals_[m_agentIdx_].y
-  //   &&
-  //          s.time > m_lastGoalConstraint_;
-  // }
-
   void getNeighbors(const State &s,
                     std::vector<Neighbor<State, Action, int>> &neighbors) {
     neighbors.clear();
@@ -306,8 +287,6 @@ public:
             result.type = Conflict::Vertex;
             result.x1 = state1.x;
             result.y1 = state1.y;
-            // std::cout << "VC " << t << "," << state1.x << "," << state1.y <<
-            // std::endl;
             return true;
           }
         }
@@ -359,17 +338,6 @@ public:
     }
   }
 
-  // void onExpandHighLevelNode(int /*cost*/) { m_highLevelExpanded_++; }
-
-  // void onExpandLowLevelNode(const State & /*s*/, int /*fScore*/,
-  //                           int /*gScore*/) {
-  //   m_lowLevelExpanded_++;
-  // }
-
-  // int highLevelExpanded() { return m_highLevelExpanded_; }
-
-  // int lowLevelExpanded() const { return m_lowLevelExpanded_; }
-
 private:
   State getState(size_t agentIdx,
                  const std::vector<PlanResult<State, Action, int>> &solution,
@@ -379,12 +347,6 @@ private:
       return solution[agentIdx].states[t].first;
     }
     assert(!solution[agentIdx].states.empty());
-    // if (m_disappearAtGoal_) {
-    //   // This is a trick to avoid changing the rest of the code significantly
-    //   // After an agent disappeared, put it at a unique but invalid position
-    //   // This will cause all calls to equalExceptTime(.) to return false.
-    //   return State(-1, -1 * (agentIdx + 1), -1, -1);
-    // }
     return solution[agentIdx].states.back().first;
   }
 
@@ -398,19 +360,9 @@ private:
   }
 
 private:
-  // std::vector< std::vector<int> > m_heuristic;
   const Constraints *m_constraints_;
-  // //上一个目标的限制，表征时间步长的一个量
-  // double m_lastGoalConstraint_;
-  // //上层扩展次数
-  // int m_highLevelExpanded_;
-  // //下层扩展次数
-  // int m_lowLevelExpanded_;
-  // bool m_disappearAtGoal_;
 
 public:
-  //智能体的索引
-  // size_t m_agentIdx_;
   //多个目标点位置
   std::vector<Location> m_goals_;
   //地图中所有的node节点

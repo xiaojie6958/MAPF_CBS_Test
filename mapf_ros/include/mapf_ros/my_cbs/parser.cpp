@@ -4,7 +4,7 @@
  * @Author: CyberC3
  * @Date: 2024-03-17 11:26:22
  * @LastEditors: zhu-hu
- * @LastEditTime: 2024-07-05 00:39:01
+ * @LastEditTime: 2024-08-01 23:03:04
  */
 #include "parser.h"
 #include "path_finder_algorithm/dijkstra.h"
@@ -139,18 +139,6 @@ void MapParser::createNodes(TiXmlHandle *hRootNode, bool onlyFirstElement) {
   }
 
   std::cout << "Point nums : " << map_nodes_.size() << std::endl;
-
-  // std::cout << "Point 0 : " << map_nodes_[0].name << ", "
-  //           << map_nodes_[0].node_id << ", " << map_nodes_[0].x_pos << ", "
-  //           << map_nodes_[0].y_pos << ", " << map_nodes_[0].z_pos << ", "
-  //           << map_nodes_[0].yaw << ", " << map_nodes_[0].type << ", "
-  //           << map_nodes_[0].outgoing_path[0].name << ", "
-  //           << map_nodes_[0].outgoing_path[1].name << ", "
-  //           << map_nodes_[0].point_layout.x_pos << ", "
-  //           << map_nodes_[0].point_layout.y_pos << ", "
-  //           << map_nodes_[0].point_layout.x_label_offset << ", "
-  //           << map_nodes_[0].point_layout.y_label_offset << ", "
-  //           << map_nodes_[0].point_layout.layer_id << std::endl;
 }
 
 void MapParser::createPaths(TiXmlHandle *hRootWay, bool onlyFirstElement) {
@@ -688,77 +676,3 @@ void MapParser::publishRouteNetwork(const std::vector<int> &route_paths_id) {
 }
 
 } // namespace map_parser
-
-// int main(int argc, char **argv) {
-//   ros::init(argc, argv, "map_parser");
-
-//   ros::NodeHandle nh("~");
-
-//   map_parser::MapParser map_parser(&nh);
-
-//   map_parser::path_finder_algorithm::Dijkstra dijkstra_planner;
-
-//   ros::Rate loop_rate(10);
-
-//   map_parser.parse();
-
-//   int source_id = 1;
-
-//   int target_id = 6;
-
-//   bool path_found = false;
-
-//   std::vector<int> path_ids;
-
-//   std::cout << "source_id : " << source_id << std::endl;
-//   std::cout << "target_id : " << target_id << std::endl;
-
-//   try {
-//     double start_time = ros::Time::now().toSec();
-//     path_ids =
-//     dijkstra_planner.findShortestPath(map_parser.getGraphOfVertex(),
-//                                                  source_id, target_id);
-//     path_found = true;
-
-//     ROS_INFO("OSM planner: Time of planning : %f  ms",
-//              1000.0 * (ros::Time::now().toSec() - start_time));
-
-//   } catch (map_parser::path_finder_algorithm::PathFinderException &e) {
-//     path_found = false;
-//     if (e.getErrId() ==
-//         map_parser::path_finder_algorithm::PathFinderException::NO_PATH_FOUND)
-//         {
-//       ROS_ERROR("OSM planner: Make plan failed...");
-//     } else
-//       ROS_ERROR("OSM planner: Undefined error");
-//   }
-
-//   if (path_ids.size() != 0) {
-//     std::cout << "planning results from [" << source_id << "] to [" <<
-//     target_id
-//               << "]" << std::endl;
-//     for (int i = 0; i < path_ids.size(); i++) {
-//       std::cout << path_ids[i] << ", ";
-//     }
-//     std::cout << std::endl;
-
-//     std::cout << "name results : ";
-//     for (int i = 0; i < path_ids.size(); i++) {
-//       std::cout << (map_parser.node_id_to_name())[path_ids[i]] << ", ";
-//     }
-//     std::cout << std::endl;
-//   }
-
-//   while (ros::ok()) {
-//     map_parser.publishMapArray();
-//     map_parser.publishMapArrow();
-
-//     if (path_found) {
-//       map_parser.publishRouteNetwork(path_ids);
-//     }
-//     ros::spinOnce();
-//     loop_rate.sleep(); // sleep 0.1s
-//   }
-
-//   return 0;
-// }
