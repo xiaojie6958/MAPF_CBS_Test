@@ -6,6 +6,7 @@
       <param name="real_car" value = "false" />
       <!-- <rosparam file="$(find osm_parser)/config/osm_parser.yaml" command="load" /> -->
   </node>
-
+  <!-- 启动 RViz 并加载配置文件 -->
+   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mapf_ros)/rviz/my_cbs_ros.rviz" />
 
 </launch>

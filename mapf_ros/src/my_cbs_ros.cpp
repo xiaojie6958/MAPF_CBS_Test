@@ -439,8 +439,8 @@ void MYCBSROS::generatePlan(
 
 void MYCBSROS::setOrderCallback(const std_msgs::StringConstPtr &msg_in) {
 
-  std::istringstream is(msg_in->data);
-  boost::property_tree::ptree pt;
+  std::istringstream is(msg_in->data); //read data
+  boost::property_tree::ptree pt;      //store Json data 
   boost::property_tree::read_json(is, pt);
 
   auto s = pt.get<std::string>("end");
