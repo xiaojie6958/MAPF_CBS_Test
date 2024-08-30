@@ -86,10 +86,10 @@ bool MYCBSROS::makePlan(const std::vector<Task> task,
     goal_ids.emplace_back(task[i].task_goal_id);
   }
 
-  //先进行任务分配：
-  // garage存储的是车辆点在地图中的位置索引下标
-  // start存储的是起始点在地图中的位置索引下标
-  // assign_result存储的是分配给start的车辆点在地图中的位置索引下标
+  // 先进行任务分配：
+  //  garage存储的是车辆点在地图中的位置索引下标
+  //  start存储的是起始点在地图中的位置索引下标
+  //  assign_result存储的是分配给start的车辆点在地图中的位置索引下标
   garage.clear();
   for (int i = 0; i < vehicle_list_.size(); i++) {
     if (vehicle_list_[i].car_status == 2)
@@ -149,7 +149,7 @@ bool MYCBSROS::makePlan(const std::vector<Task> task,
     }
   }
 
-  //打印任务分配情况
+  // 打印任务分配情况
   for (int i = 0; i < vehicle_list_.size(); i++) {
     std::cout << "vehicle[" << i << "] : " << vehicle_list_[i].task_id
               << std::endl;
@@ -161,8 +161,8 @@ bool MYCBSROS::makePlan(const std::vector<Task> task,
   std::vector<State> startStates;
   std::vector<Location> goals;
 
-  //先求取车辆起始位置到相应任务起点的路径
-  // get agents start pose in world frame
+  // 先求取车辆起始位置到相应任务起点的路径
+  //  get agents start pose in world frame
   for (int i = 0; i < agent_num; ++i) {
     // transform to map form
     startStates.emplace_back(State(0, 0, 0, assign_result[i]));
@@ -211,7 +211,7 @@ bool MYCBSROS::makePlan(const std::vector<Task> task,
     ROS_ERROR("Planning NOT successful!");
   }
 
-  //再求取车辆从相应任务起点到相应任务终点的路径
+  // 再求取车辆从相应任务起点到相应任务终点的路径
 
   startStates.clear();
 
@@ -273,8 +273,8 @@ bool MYCBSROS::makePlan(const Task task, mapf_msgs::GlobalPlan &plan,
   std::vector<State> startStates;
   std::vector<Location> goals;
 
-  //先求取车辆起始位置到相应任务起点的路径
-  // get agents start pose in world frame
+  // 先求取车辆起始位置到相应任务起点的路径
+  //  get agents start pose in world frame
 
   // transform to map form
   startStates.emplace_back(State(0, 0, 0, task.task_start_id));
@@ -343,8 +343,8 @@ bool MYCBSROS::makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
   std::vector<State> startStates;
   std::vector<Location> goals;
 
-  //先求取车辆起始位置到相应任务起点的路径
-  // get agents start pose in world frame
+  // 先求取车辆起始位置到相应任务起点的路径
+  //  get agents start pose in world frame
   for (int i = 0; i < agent_num; ++i) {
     // transform to map form
     startStates.emplace_back(State(0, 0, 0, start_ids_[i]));
@@ -436,23 +436,24 @@ void MYCBSROS::generatePlan(
 
   } // end solution for
 }
-
+// receive and deal ROS msgs
 void MYCBSROS::setOrderCallback(const std_msgs::StringConstPtr &msg_in) {
 
-  std::istringstream is(msg_in->data); //read data
-  boost::property_tree::ptree pt;      //store Json data 
+  std::istringstream is(msg_in->data); // read data
+  boost::property_tree::ptree pt;      // store Json data
   boost::property_tree::read_json(is, pt);
 
+  // get value from end which contain start_id and goal_id
   auto s = pt.get<std::string>("end");
-  //去掉中括号:"[]"
+  // 去掉中括号:"[]"
   s.erase(s.begin());
   s.erase(s.end() - 1);
-  //去掉大括号："{}"
+  // 去掉大括号："{}"
   s.erase(std::remove(s.begin(), s.end(), '{'), s.end());
   s.erase(std::remove(s.begin(), s.end(), '}'), s.end());
 
   std::cout << "s:" << s << std::endl;
-
+  // creat a new string stream to store information from s
   std::istringstream iss(s);
   std::vector<int> starts;
   std::vector<int> goals;
@@ -474,7 +475,7 @@ void MYCBSROS::setOrderCallback(const std_msgs::StringConstPtr &msg_in) {
     }
   }
 
-  //订单触发调度任务，首次触发和非首次触发处理不同
+  // 订单触发调度任务，首次触发和非首次触发处理不同
   if (car_running_ == true) {
     newOrderComeIn(starts, goals);
   } else {
@@ -489,7 +490,7 @@ void MYCBSROS::calculateAllPos() {
   double step_length = 0.2;
   std::cout << "all result size : " << all_results_.size() << std::endl;
   for (int i = 0; i < all_results_.size(); i++) {
-    //如果任务已经执行完了，则不需要再计算空的路径点了
+    // 如果任务已经执行完了，则不需要再计算空的路径点了
     if (task_list_[i].task_status == 4) {
       all_pos_.emplace_back();
       continue;
@@ -700,6 +701,7 @@ void MYCBSROS::publishStartGoalPoint() {
 
   int color_count = 0;
   point_marker.type = visualization_msgs::Marker::CUBE;
+  // maker for goals
   for (int i = 0; i < task_list_.size(); ++i) {
     if (task_list_[i].task_status == 4)
       continue;
@@ -730,6 +732,7 @@ void MYCBSROS::publishStartGoalPoint() {
     start_goal_points_.markers.emplace_back(point_marker);
   }
 
+  // show in Rviz
   pub_start_goal_point_.publish(start_goal_points_);
 
   int id_count = 0;
@@ -854,7 +857,7 @@ bool MYCBSROS::conflictSolve(Conflict conflict) {
   int point_i = conflict.point_ids.first;
   int point_j = conflict.point_ids.second;
 
-  //处理终点冲突
+  // 处理终点冲突 i=第i个点，point_i=冲突发生的位置
   if (point_i == all_results_[path_i].size() - 1) {
     int i = point_i;
     int j = point_j;
@@ -863,12 +866,12 @@ bool MYCBSROS::conflictSolve(Conflict conflict) {
       i--;
       j--;
     }
-    // i这里要等
+    // i这里要等   等path_j到+path_j的wait_time
     all_results_[path_i][i].wait_time +=
         all_results_[path_j][point_j].cost +
         all_results_[path_j][point_j].wait_time -
         all_results_[path_i][point_i].cost + 15;
-    //重新计算cost
+    // 重新计算cost
     for (int k = i + 1; k < all_results_[path_i].size(); k++) {
       all_results_[path_i][k].cost += all_results_[path_i][i].wait_time;
     }
@@ -876,7 +879,7 @@ bool MYCBSROS::conflictSolve(Conflict conflict) {
     return true;
   }
 
-  //处理终点冲突
+  // 处理终点冲突
   if (point_j == all_results_[path_j].size() - 1) {
     std::cout << "c   ";
     int i = point_i;
@@ -892,7 +895,7 @@ bool MYCBSROS::conflictSolve(Conflict conflict) {
         all_results_[path_i][point_i].wait_time -
         all_results_[path_j][point_j].cost + 15;
     std::cout << "ccc   ";
-    //重新计算cost
+    // 重新计算cost
     for (int k = j + 1; k < all_results_[path_j].size(); k++) {
       all_results_[path_j][k].cost += all_results_[path_j][j].wait_time;
     }
@@ -900,14 +903,14 @@ bool MYCBSROS::conflictSolve(Conflict conflict) {
     return true;
   }
 
-  //处理中间位置的冲突，选择短的那一条路径等待
+  // 处理中间位置的冲突，选择短的那一条路径等待
   if (all_results_[path_i].back().cost < all_results_[path_j].back().cost) {
     all_results_[path_i][point_i - 1].wait_time +=
         all_results_[path_j][point_j].cost +
         all_results_[path_j][point_j].wait_time -
         all_results_[path_i][point_i].cost + 15;
 
-    //重新计算后面点的cost
+    // 重新计算后面点的cost
     for (int i = point_i; i < all_results_[path_i].size(); ++i) {
       all_results_[path_i][i].cost +=
           all_results_[path_i][point_i - 1].wait_time;
@@ -920,7 +923,7 @@ bool MYCBSROS::conflictSolve(Conflict conflict) {
         all_results_[path_i][point_i].wait_time -
         all_results_[path_j][point_j].cost + 15;
 
-    //重新计算后面点的cost
+    // 重新计算后面点的cost
     for (int i = point_j; i < all_results_[path_j].size(); ++i) {
       all_results_[path_j][i].cost +=
           all_results_[path_j][point_j - 1].wait_time;
@@ -935,19 +938,19 @@ bool MYCBSROS::firstConflictDetect(Conflict &conflict) {
   for (int i = 0; i < all_results_.size(); ++i) {
     for (int j = i + 1; j < all_results_.size(); ++j) {
       if (conflictDetect(i, j, conflict) == true) {
-        //产生冲突
+        // 产生冲突
         return true;
       }
     }
   }
-  //没有冲突了
+  // 没有冲突了
   return false;
 }
 
 bool MYCBSROS::conflictDetect(int path_i, int path_j, Conflict &conflict) {
   for (int i = 0; i < all_results_[path_i].size(); ++i) {
     for (int j = 0; j < all_results_[path_j].size(); ++j) {
-      //对中间的点进行冲突检查
+      // 对中间的点进行冲突检查
       if (twoResultPointConflict(all_results_[path_i][i],
                                  all_results_[path_j][j])) {
         conflict.conflict_id = std::make_pair(path_i, path_j);
@@ -955,7 +958,7 @@ bool MYCBSROS::conflictDetect(int path_i, int path_j, Conflict &conflict) {
         std::cout << "check 0   ";
         return true;
       }
-      //对终点冲突进行额外的检查
+      // 对终点冲突进行额外的检查
       if (i == all_results_[path_i].size() - 1 &&
           all_results_[path_i][i].point_id ==
               all_results_[path_j][j].point_id) {
@@ -966,7 +969,7 @@ bool MYCBSROS::conflictDetect(int path_i, int path_j, Conflict &conflict) {
           return true;
         }
       }
-      //对终点冲突进行额外的检查
+      // 对终点冲突进行额外的检查
       if (j == all_results_[path_j].size() - 1 &&
           all_results_[path_j][j].point_id ==
               all_results_[path_i][i].point_id) {
@@ -982,11 +985,11 @@ bool MYCBSROS::conflictDetect(int path_i, int path_j, Conflict &conflict) {
 
   return false;
 }
-
+// 中间点进行冲突检查
 bool MYCBSROS::twoResultPointConflict(const ResultPoint pt1,
                                       const ResultPoint pt2) {
   if (pt1.point_id != pt2.point_id)
-    return false;
+    return false; // no conflict
 
   int pt1_cost_low = pt1.cost - 5;
   int pt1_cost_high = pt1.cost + pt1.wait_time + 5;
@@ -998,6 +1001,7 @@ bool MYCBSROS::twoResultPointConflict(const ResultPoint pt1,
       pt1_cost_high == pt2_cost_low || pt1_cost_high == pt2_cost_high) {
     return true;
   }
+  // 在同一点所处的时间轴有交叉就Conflict
   int length =
       abs(pt1_cost_low - pt2_cost_high) > abs(pt2_cost_low - pt1_cost_high)
           ? abs(pt1_cost_low - pt2_cost_high)
@@ -1021,7 +1025,7 @@ void MYCBSROS::printAllResult() {
     std::cout << std::endl;
   }
 }
-
+// start=all task
 bool MYCBSROS::assignTasks(const std::vector<int> &vehicles_init,
                            const std::vector<int> &start,
                            std::vector<int> &assign_result) {
@@ -1035,7 +1039,7 @@ bool MYCBSROS::assignTasks(const std::vector<int> &vehicles_init,
     vehicle_states.emplace_back(std::make_pair(vehicles_init[i], false));
   }
 
-  //找到达每个任务点的最短路径
+  // 找到达每个任务点的最短路径 graph=共享指针
   std::vector<double> shortest_lengths;
   std::shared_ptr<std::vector<std::vector<float>>> graph =
       std::make_shared<std::vector<std::vector<float>>>(
@@ -1053,12 +1057,14 @@ bool MYCBSROS::assignTasks(const std::vector<int> &vehicles_init,
     }
     shortest_lengths.emplace_back(min_dis);
   }
-
+  // multi_maps= start list of shortest path
   std::multimap<double, int> multi_maps;
   for (int i = 0; i < start.size(); i++) {
     multi_maps.insert(std::make_pair(shortest_lengths[i], i));
   }
 
+  // iter.first=shortestPath iter.second=task_index    DBL_MAX=Infinity
+  // vehicle_states.second==true have task
   for (auto &iter : multi_maps) {
     double min_distance = DBL_MAX;
     int res = -1;
@@ -1078,7 +1084,7 @@ bool MYCBSROS::assignTasks(const std::vector<int> &vehicles_init,
       }
     }
     assign_result[iter.second] = vehicles_init[res];
-    //第iter.second任务分配给了第res辆车，未使用
+    // 第iter.second任务分配给了第res辆车，未使用
     task_assign_result_[iter.second] = res;
     vehicle_states[res].second = true;
   }
@@ -1107,7 +1113,7 @@ void MYCBSROS::firstOrderComeIn(const std::vector<int> &start,
   start_ids_ = start;
   goal_ids_ = goal;
 
-  //收到订单后，对任务进行存储
+  // 收到订单后，对任务进行存储
   int size = start.size();
   task_list_.clear();
   std::vector<Task> tasks;
@@ -1150,10 +1156,10 @@ void MYCBSROS::firstOrderComeIn(const std::vector<int> &start,
 
 void MYCBSROS::newOrderComeIn(const std::vector<int> &start,
                               const std::vector<int> &goal) {
-  //第一步：保存现有的all_results_;
+  // 第一步：保存现有的all_results_;
   auto original_all_results = all_results_;
 
-  //新订单来临之后，存储原有机器人的新起点
+  // 新订单来临之后，存储原有机器人的新起点
   std::vector<ResultPoint> original_new_start_points;
   original_new_start_points.clear();
   original_new_start_points.resize(all_results_.size());
@@ -1202,7 +1208,7 @@ void MYCBSROS::newOrderComeIn(const std::vector<int> &start,
     original_all_results.emplace_back(one_path);
   }
 
-  //更新original_all_results里的cost!!!
+  // 更新original_all_results里的cost!!!
   for (int i = 0; i < original_all_results.size(); i++) {
     for (int j = 1; j < original_all_results[i].size(); j++) {
       double length = std::hypot(original_all_results[i][j].x_y.first -
@@ -1216,11 +1222,11 @@ void MYCBSROS::newOrderComeIn(const std::vector<int> &start,
     }
   }
 
-  //第二步：将已有的路径截掉走过的路径，重新保存all_path_ids_
+  // 第二步：将已有的路径截掉走过的路径，重新保存all_path_ids_
 
-  //第三步：重新规划新传进来的任务
+  // 第三步：重新规划新传进来的任务
 
-  //第四步：将原来的all_path_ids_存入新的all_path_ids_
+  // 第四步：将原来的all_path_ids_存入新的all_path_ids_
 
   mapf_msgs::GlobalPlan plan;
   std::vector<std::vector<int>> all_path_ids;
@@ -1245,13 +1251,13 @@ void MYCBSROS::newOrderComeIn(const std::vector<int> &start,
 
   generateAllResult(all_path_ids, 0.2);
 
-  //把两个部分合并
+  // 把两个部分合并
   all_results_.insert(all_results_.begin(), original_all_results.begin(),
                       original_all_results.end());
 
   generateAllRoutePathForShow();
 
-  //第五步：进行冲突检测及冲突消解
+  // 第五步：进行冲突检测及冲突消解
   mapf::MYCBSROS::Conflict conflict;
   while (firstConflictDetect(conflict) == true) {
 
@@ -1260,7 +1266,7 @@ void MYCBSROS::newOrderComeIn(const std::vector<int> &start,
 
   printAllResult();
 
-  //第六步：重新计算新的all_pos_
+  // 第六步：重新计算新的all_pos_
   calculateAllPos();
 
   control_step_ = 0;
@@ -1268,7 +1274,7 @@ void MYCBSROS::newOrderComeIn(const std::vector<int> &start,
 
 void MYCBSROS::backToGarage(const int task_id) {
 
-  //第一步：保存现有的all_results_;
+  // 第一步：保存现有的all_results_;
   std::cout << "task id : " << task_id << std::endl;
   auto original_all_results = all_results_;
 
@@ -1276,16 +1282,16 @@ void MYCBSROS::backToGarage(const int task_id) {
   original_new_start_points.clear();
   original_new_start_points.resize(all_results_.size());
 
-  //存储原始未完成任务路径的下一个起点
+  // 存储原始未完成任务路径的下一个起点
   std::vector<int> original_next_index;
   original_next_index.resize(all_results_.size());
   int point_count = map_nodes_.size();
 
   for (int i = 0; i < all_results_.size(); i++) {
-    //已完成任务的车辆，不需要重新标记，需要为它规划回车库的路径
+    // 已完成任务的车辆，不需要重新标记，需要为它规划回车库的路径
     if (i == task_id)
       continue;
-    //标记未完成任务的车辆的新位置
+    // 标记未完成任务的车辆的新位置
     if (control_step_ - 1 >= all_pos_[i].size()) {
       ResultPoint pt;
       pt.cost = 0;
@@ -1330,7 +1336,7 @@ void MYCBSROS::backToGarage(const int task_id) {
     original_all_results.emplace_back(one_path);
   }
 
-  //更新original_all_results里的cost!!!
+  // 更新original_all_results里的cost!!!
   for (int i = 0; i < original_all_results.size(); i++) {
     for (int j = 1; j < original_all_results[i].size(); j++) {
       double length = std::hypot(original_all_results[i][j].x_y.first -
@@ -1355,7 +1361,7 @@ void MYCBSROS::backToGarage(const int task_id) {
   int start_id = task_list_[task_id].task_goal_id;
 
   std::cout << "check5" << std::endl;
-  //选择最近的车库返回
+  // 选择最近的车库返回
   double min_dis = 1000000.0;
   int min_index = -1;
   std::vector<std::vector<int>> path_ids;
@@ -1380,16 +1386,16 @@ void MYCBSROS::backToGarage(const int task_id) {
 
   std::cout << "min_index : " << min_index << std::endl;
 
-  //更新task列表
+  // 更新task列表
   task_list_[task_id].task_start_id = start_id;
   task_list_[task_id].task_goal_id = garage_list_[min_index].map_point_id;
   task_list_[task_id].task_status = 3;
 
-  //更新车辆状态
+  // 更新车辆状态
   vehicle_list_[car_id].car_status = 3;
 
   std::cout << "check5" << std::endl;
-  //将车辆从原来的车库中移除
+  // 将车辆从原来的车库中移除
   for (int i = 0; i < garage_list_[vehicle_list_[car_id].garage_id]
                           .parking_vehicle_index.size();
        i++) {
@@ -1403,7 +1409,7 @@ void MYCBSROS::backToGarage(const int task_id) {
     }
   }
   std::cout << "check5" << std::endl;
-  //给车辆重新分配一个车库
+  // 给车辆重新分配一个车库
   vehicle_list_[car_id].garage_id = min_index;
 
   std::cout << "Plan result" << std::endl;
@@ -1425,7 +1431,7 @@ void MYCBSROS::backToGarage(const int task_id) {
 
   generateAllRoutePathForShow();
 
-  //第五步：进行冲突检测及冲突消解
+  // 第五步：进行冲突检测及冲突消解
   mapf::MYCBSROS::Conflict conflict;
   while (firstConflictDetect(conflict) == true) {
 
@@ -1434,16 +1440,17 @@ void MYCBSROS::backToGarage(const int task_id) {
 
   printAllResult();
 
-  //第六步：重新计算新的all_pos_
+  // 第六步：重新计算新的all_pos_
   calculateAllPos();
 
   control_step_ = 0;
 }
-
+// find car next ID
 int MYCBSROS::findNextId(const int task_id) {
   double cur_x = all_pos_[task_id][control_step_].first;
   double cur_y = all_pos_[task_id][control_step_].second;
   int min_index = 0;
+  // calculate dis
   double dis = hypot(all_results_[task_id][0].x_y.first - cur_x,
                      all_results_[task_id][0].x_y.second - cur_y);
   for (int i = 1; i < all_results_[task_id].size(); i++) {
@@ -1483,35 +1490,33 @@ int main(int argc, char **argv) {
   ros::NodeHandle nh("~");
   mapf::MYCBSROS my_cbs_ros(&nh);
 
-  //车辆的初始位置
+  // 车辆的初始位置
   std::vector<int> vehicles_init; //{1, 2, 3, 4}
 
   if (my_cbs_ros.real_car_ == false) {
-    vehicles_init = {11, 13, 20, 31};
+    vehicles_init = {11, 13, 20, 31, 45, 66};
   } else {
     vehicles_init = {0};
   }
 
   my_cbs_ros.vehicle_init_ids_ = vehicles_init;
 
-  //初始化车库编号和位置
+  // 初始化车库编号和位置
   my_cbs_ros.garage_list_.clear();
-  my_cbs_ros.garage_list_.emplace_back();
-  my_cbs_ros.garage_list_.back().garage_id = 0;
-  my_cbs_ros.garage_list_.back().map_point_id = 59;
+  for (int i = 0; i < 6; i++) {
+    my_cbs_ros.garage_list_.emplace_back();
+    my_cbs_ros.garage_list_.back().garage_id = i;
+    my_cbs_ros.garage_list_.back().map_point_id = 59 + i;
+  }
 
-  my_cbs_ros.garage_list_.emplace_back();
-  my_cbs_ros.garage_list_.back().garage_id = 1;
-  my_cbs_ros.garage_list_.back().map_point_id = 60;
-
-  //初始化车辆位置及初始停靠的车库
+  // 初始化车辆位置及初始停靠的车库
   my_cbs_ros.vehicle_list_.clear();
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 6; i++) {
     mapf::MYCBSROS::Vehicle vehicle;
     vehicle.car_id = i;
     vehicle.car_status = 1;
-    vehicle.garage_id = i % 2;
-    my_cbs_ros.garage_list_[i % 2].parking_vehicle_index.emplace_back(i);
+    vehicle.garage_id = i % 6;
+    my_cbs_ros.garage_list_[i % 6].parking_vehicle_index.emplace_back(i);
     my_cbs_ros.vehicle_list_.emplace_back(vehicle);
   }
 
@@ -1519,7 +1524,7 @@ int main(int argc, char **argv) {
 
   std::cout << "waiting order cmd..." << std::endl;
   while (my_cbs_ros.start_ids_.empty() && ros::ok()) {
-    //显示地图
+    // 显示地图
     my_cbs_ros.map_parser_->publishMapArray();
     my_cbs_ros.map_parser_->publishMapArrow();
     my_cbs_ros.publishOneStepPos(-1);
