@@ -89,7 +89,7 @@ void MapParser::createNodes(TiXmlHandle *hRootNode, bool onlyFirstElement) {
     nodeElement->Attribute("xPosition", &(tmp_node.x_pos));
     nodeElement->Attribute("yPosition", &(tmp_node.y_pos));
     nodeElement->Attribute("zPosition", &(tmp_node.z_pos));
-    //将单位从mm换算成m
+    // 将单位从mm换算成m
     tmp_node.x_pos = tmp_node.x_pos * 0.001;
     tmp_node.y_pos = tmp_node.y_pos * 0.001;
     tmp_node.z_pos = tmp_node.z_pos * 0.001;
@@ -122,7 +122,7 @@ void MapParser::createNodes(TiXmlHandle *hRootNode, bool onlyFirstElement) {
                               &(tmp_node.point_layout.x_label_offset));
       point_layout->Attribute("yLabelOffset",
                               &(tmp_node.point_layout.y_label_offset));
-      //将单位从mm换算成m
+      // 将单位从mm换算成m
       tmp_node.point_layout.x_pos = tmp_node.point_layout.x_pos * 0.001;
       tmp_node.point_layout.y_pos = tmp_node.point_layout.y_pos * 0.001;
       tmp_node.point_layout.x_label_offset =
@@ -159,7 +159,7 @@ void MapParser::createPaths(TiXmlHandle *hRootWay, bool onlyFirstElement) {
     pathElement->Attribute("maxVelocity", &(tmp_path.max_vel));
     pathElement->Attribute("maxReverseVelocity", &(tmp_path.max_reverse_vel));
     tmp_path.locked = pathElement->Attribute("locked");
-    //将单位转换为m或者m/s
+    // 将单位转换为m或者m/s
     tmp_path.length = tmp_path.length * 0.001;
     tmp_path.max_vel = tmp_path.max_vel * 0.001;
     tmp_path.max_reverse_vel = tmp_path.max_reverse_vel * 0.001;
@@ -179,7 +179,7 @@ void MapParser::createPaths(TiXmlHandle *hRootWay, bool onlyFirstElement) {
           ControlPoint control_pt;
           controlPointElement->Attribute("x", &(control_pt.x));
           controlPointElement->Attribute("y", &(control_pt.y));
-          //将单位转换为m
+          // 将单位转换为m
           control_pt.x = control_pt.x * 0.001;
           control_pt.y = control_pt.y * 0.001;
           tmp_path.path_layout.control_points.emplace_back(control_pt);
@@ -439,12 +439,13 @@ void MapParser::publishPointText() {
 void MapParser::publishMapArray() {
   int id_count = 0;
   map_marker_array.markers.clear();
+  // draw center line
   for (int i = 0; i < map_paths_.size(); i++) {
     drawCenterLine(map_paths_[i], id_count);
     id_count++;
   }
 
-  //画停车库
+  // 画停车库
 
   visualization_msgs::Marker point_marker;
   point_marker.header.frame_id = "world";
