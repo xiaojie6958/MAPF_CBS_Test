@@ -474,6 +474,16 @@ void MapParser::publishMapArray() {
   point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 2].y_pos;
   map_marker_array.markers.emplace_back(point_marker);
 
+  point_marker.id = id_count++;
+  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 4].x_pos;
+  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 4].y_pos;
+  map_marker_array.markers.emplace_back(point_marker);
+
+  point_marker.id = id_count++;
+  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 6].x_pos;
+  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 6].y_pos;
+  map_marker_array.markers.emplace_back(point_marker);
+
   map_pub.publish(map_marker_array);
 }
 
