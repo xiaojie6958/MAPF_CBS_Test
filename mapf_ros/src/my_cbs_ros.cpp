@@ -1494,7 +1494,7 @@ int main(int argc, char **argv) {
   std::vector<int> vehicles_init; //{1, 2, 3, 4}
 
   if (my_cbs_ros.real_car_ == false) {
-    vehicles_init = {11, 13, 20, 31, 45, 66};
+    vehicles_init = {11, 13, 20, 31};
   } else {
     vehicles_init = {0};
   }
@@ -1503,20 +1503,30 @@ int main(int argc, char **argv) {
 
   // 初始化车库编号和位置
   my_cbs_ros.garage_list_.clear();
-  for (int i = 0; i < 6; i++) {
-    my_cbs_ros.garage_list_.emplace_back();
-    my_cbs_ros.garage_list_.back().garage_id = i;
-    my_cbs_ros.garage_list_.back().map_point_id = 59 + i;
-  }
+  my_cbs_ros.garage_list_.emplace_back();
+  my_cbs_ros.garage_list_.back().garage_id = 0;
+  my_cbs_ros.garage_list_.back().map_point_id = 57; // 59
+
+  my_cbs_ros.garage_list_.emplace_back();
+  my_cbs_ros.garage_list_.back().garage_id = 1;
+  my_cbs_ros.garage_list_.back().map_point_id = 58; // 60
+
+  my_cbs_ros.garage_list_.emplace_back();
+  my_cbs_ros.garage_list_.back().garage_id = 2;
+  my_cbs_ros.garage_list_.back().map_point_id = 59;
+
+  my_cbs_ros.garage_list_.emplace_back();
+  my_cbs_ros.garage_list_.back().garage_id = 3;
+  my_cbs_ros.garage_list_.back().map_point_id = 60;
 
   // 初始化车辆位置及初始停靠的车库
   my_cbs_ros.vehicle_list_.clear();
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 4; i++) {
     mapf::MYCBSROS::Vehicle vehicle;
     vehicle.car_id = i;
     vehicle.car_status = 1;
-    vehicle.garage_id = i % 6;
-    my_cbs_ros.garage_list_[i % 6].parking_vehicle_index.emplace_back(i);
+    vehicle.garage_id = i;
+    my_cbs_ros.garage_list_[i].parking_vehicle_index.emplace_back(i);
     my_cbs_ros.vehicle_list_.emplace_back(vehicle);
   }
 
