@@ -36,12 +36,12 @@ void MapParser::set_new_map(std::string xml_name) {
 void MapParser::set_type_of_path(std::vector<std::string> types) {
   this->type_of_path_ = types;
 }
-
+// 解析地图
 void MapParser::parse(bool onlyFirstElement) {
   TiXmlDocument doc(xml_file_name_);
-  TiXmlNode *xml_map;
-  TiXmlNode *node;
-  TiXmlNode *path;
+  TiXmlNode *xml_map; // 根节点
+  TiXmlNode *node;    // 节点信息
+  TiXmlNode *path;    // 路径信息
 
   TiXmlHandle hRootNode(0);
   TiXmlHandle hRootPath(0);
@@ -53,12 +53,13 @@ void MapParser::parse(bool onlyFirstElement) {
     ROS_ERROR("Map parser: Failed to load file %s", xml_file_name_.c_str());
     throw std::runtime_error("Failed to load xml");
   }
+  // XML结构解析
   xml_map = doc.FirstChildElement();
   node = xml_map->FirstChild("point");
   path = xml_map->FirstChild("path");
   TiXmlElement *nodeElement = node->ToElement();
   TiXmlElement *pathElement = path->ToElement();
-
+  // 节点和路径的句柄传给createPaths和createNodes
   hRootNode = TiXmlHandle(nodeElement);
   hRootPath = TiXmlHandle(pathElement);
   createPaths(&hRootPath, onlyFirstElement);
@@ -71,6 +72,7 @@ void MapParser::parse(bool onlyFirstElement) {
   std::cout << "MapParser Init Finished!!!" << std::endl;
 }
 
+// 解析XML地图文件，加载Nodes and Paths
 void MapParser::createNodes(TiXmlHandle *hRootNode, bool onlyFirstElement) {
   map_nodes_.clear();
 
@@ -80,7 +82,7 @@ void MapParser::createNodes(TiXmlHandle *hRootNode, bool onlyFirstElement) {
   for (nodeElement; nodeElement;
        nodeElement = nodeElement->NextSiblingElement("point")) {
 
-    MAP_NODE tmp_node;
+    MAP_NODE tmp_node; // 存储当前节点的数据
 
     tmp_node.node_id = node_id++;
     tmp_node.name = nodeElement->Attribute("name");
@@ -238,7 +240,7 @@ std::shared_ptr<std::vector<std::vector<float>>> MapParser::getGraphOfVertex() {
   return std::make_shared<std::vector<std::vector<float>>>(networkArray_);
 }
 
-// TODO spravit const ref
+// TODO spravit const ref  函数重载
 void MapParser::publishPoint(geometry_msgs::Point point, int marker_type,
                              double radius,
                              geometry_msgs::Quaternion orientation) {
@@ -293,7 +295,7 @@ void MapParser::publishPoint(const MAP_NODE &node, int marker_type,
   publishPoint(point, marker_type, radius, orientation);
 }
 
-// publishing all paths
+// publishing all paths and std start and goal
 void MapParser::publishRouteNetwork() {
   nav_msgs::Path path;
   path.header.frame_id = "world";
@@ -303,6 +305,7 @@ void MapParser::publishRouteNetwork() {
   pose.pose.position.y = 0;
   pose.pose.position.z = 0;
 
+  // 遍历map_paths中所有的路径，map_paths是路径的集合
   for (int i = 0; i < map_paths_.size(); i++) {
     path.poses.clear();
     pose.pose.position.x =
@@ -357,6 +360,7 @@ void MapParser::publishMapArrow() {
         map_nodes_[node_name_to_id_[map_paths_[i].destination_node_name]].x_pos;
     double end_y =
         map_nodes_[node_name_to_id_[map_paths_[i].destination_node_name]].y_pos;
+    // atan2 计算路径的角度，createQuaternionFromYaw角度转换成四元素数
     double yaw = atan2(end_y - start_y, end_x - start_x);
     auto tf_q = tf::createQuaternionFromYaw(yaw);
     point_marker.pose.orientation.x = tf_q.getX();
@@ -374,7 +378,7 @@ void MapParser::publishMapArrow() {
 
   publishPointText();
 }
-
+// 发布圆柱形cylinder用来显示地图上的点
 void MapParser::publishMapPoint() {
   int id_count = 0;
   map_point_markers.markers.clear();
@@ -453,7 +457,6 @@ void MapParser::publishMapArray() {
   point_marker.ns = "map_garage";
   point_marker.action = visualization_msgs::Marker::ADD;
   point_marker.type = visualization_msgs::Marker::CUBE;
-  point_marker.id = id_count++;
   point_marker.lifetime = ros::Duration(0);
   // Scale
   point_marker.scale.x = 4.5;
@@ -465,6 +468,7 @@ void MapParser::publishMapArray() {
   point_marker.color.b = 0.0;
   point_marker.color.a = 0.5;
 
+  point_marker.id = id_count++;
   point_marker.pose.position.x = map_nodes_.back().x_pos;
   point_marker.pose.position.y = map_nodes_.back().y_pos;
   map_marker_array.markers.emplace_back(point_marker);
@@ -475,13 +479,13 @@ void MapParser::publishMapArray() {
   map_marker_array.markers.emplace_back(point_marker);
 
   point_marker.id = id_count++;
-  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 4].x_pos;
-  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 4].y_pos;
+  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 3].x_pos;
+  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 3].y_pos;
   map_marker_array.markers.emplace_back(point_marker);
 
   point_marker.id = id_count++;
-  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 6].x_pos;
-  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 6].y_pos;
+  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 4].x_pos;
+  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 4].y_pos;
   map_marker_array.markers.emplace_back(point_marker);
 
   map_pub.publish(map_marker_array);
