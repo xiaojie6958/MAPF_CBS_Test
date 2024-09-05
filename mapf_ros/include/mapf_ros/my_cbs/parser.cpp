@@ -479,20 +479,95 @@ void MapParser::publishMapArray() {
   point_marker.pose.position.y = map_nodes_.back().y_pos;
   map_marker_array.markers.emplace_back(point_marker);
 
-  point_marker.id = id_count++;
-  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 2].x_pos;
-  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 2].y_pos;
-  map_marker_array.markers.emplace_back(point_marker);
+  // 画工作区A
+  visualization_msgs::Marker work_area_a;
+  work_area_a.header.frame_id = "world";
+  work_area_a.header.stamp = ros::Time::now();
+  work_area_a.ns = "work_area_a";
+  work_area_a.action = visualization_msgs::Marker::ADD;
+  work_area_a.type = visualization_msgs::Marker::CYLINDER;
+  work_area_a.lifetime = ros::Duration(0);
+  // Scale
+  work_area_a.scale.x = 3.5;
+  work_area_a.scale.y = 3.5;
+  work_area_a.scale.z = 0.5;
+  // Color
+  work_area_a.color.r = 1.0;
+  work_area_a.color.g = 0.5;
+  work_area_a.color.b = 0.0;
+  work_area_a.color.a = 0.5;
 
-  point_marker.id = id_count++;
-  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 3].x_pos;
-  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 3].y_pos;
-  map_marker_array.markers.emplace_back(point_marker);
+  // Point 60
+  work_area_a.id = id_count++;
+  work_area_a.pose.position.x = map_nodes_[57].x_pos;
+  work_area_a.pose.position.y = map_nodes_[57].y_pos;
+  map_marker_array.markers.emplace_back(work_area_a);
 
-  point_marker.id = id_count++;
-  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 4].x_pos;
-  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 4].y_pos;
-  map_marker_array.markers.emplace_back(point_marker);
+  // Point 59
+  work_area_a.id = id_count++;
+  work_area_a.pose.position.x = map_nodes_[56].x_pos;
+  work_area_a.pose.position.y = map_nodes_[56].y_pos;
+  map_marker_array.markers.emplace_back(work_area_a);
+
+  // 画工作区B
+  visualization_msgs::Marker work_area_b;
+  work_area_b.header.frame_id = "world";
+  work_area_b.header.stamp = ros::Time::now();
+  work_area_b.ns = "work_area_b";
+  work_area_b.action = visualization_msgs::Marker::ADD;
+  work_area_b.type = visualization_msgs::Marker::CYLINDER;
+  work_area_b.lifetime = ros::Duration(0);
+  // Scale
+  work_area_b.scale.x = 3.5;
+  work_area_b.scale.y = 3.5;
+  work_area_b.scale.z = 0.5;
+  // Color
+  work_area_b.color.r = 1.0;
+  work_area_b.color.g = 1.0;
+  work_area_b.color.b = 0.0;
+  work_area_b.color.a = 0.5;
+
+  // Point 58
+  work_area_b.id = id_count++;
+  work_area_b.pose.position.x = map_nodes_[55].x_pos;
+  work_area_b.pose.position.y = map_nodes_[55].y_pos;
+  map_marker_array.markers.emplace_back(work_area_b);
+
+  // Point 57
+  work_area_b.id = id_count++;
+  work_area_b.pose.position.x = map_nodes_[54].x_pos;
+  work_area_b.pose.position.y = map_nodes_[54].y_pos;
+  map_marker_array.markers.emplace_back(work_area_b);
+
+  // 画充电桩
+  visualization_msgs::Marker charging_station;
+  charging_station.header.frame_id = "world";
+  charging_station.header.stamp = ros::Time::now();
+  charging_station.ns = "charging_station";
+  charging_station.action = visualization_msgs::Marker::ADD;
+  charging_station.type = visualization_msgs::Marker::CYLINDER;
+  charging_station.lifetime = ros::Duration(0);
+  // Scale
+  charging_station.scale.x = 3.5;
+  charging_station.scale.y = 3.5;
+  charging_station.scale.z = 0.5;
+  // Color
+  charging_station.color.r = 0.0;
+  charging_station.color.g = 0.0;
+  charging_station.color.b = 1.0;
+  charging_station.color.a = 0.5;
+
+  // Point 19
+  charging_station.id = id_count++;
+  charging_station.pose.position.x = map_nodes_[27].x_pos;
+  charging_station.pose.position.y = map_nodes_[27].y_pos;
+  map_marker_array.markers.emplace_back(charging_station);
+
+  // Point 17
+  charging_station.id = id_count++;
+  charging_station.pose.position.x = map_nodes_[26].x_pos;
+  charging_station.pose.position.y = map_nodes_[26].y_pos;
+  map_marker_array.markers.emplace_back(charging_station);
 
   map_pub.publish(map_marker_array);
 }
