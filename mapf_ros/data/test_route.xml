@@ -624,7 +624,7 @@
         <property name="loopback:unloadOperation" value="Unload cargo"/>
         <vehicleLayout color="#FF0000"/>
     </vehicle>
-    <vehicle name="Vehicle-02" length="1000" energyLevelCritical="30" energyLevelGood="90" energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="45" maxVelocity="1000" maxReverseVelocity="1000">
+    <!-- <vehicle name="Vehicle-02" length="1000" energyLevelCritical="30" energyLevelGood="90" energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="45" maxVelocity="1000" maxReverseVelocity="1000">
         <property name="loopback:loadOperation" value="Load cargo"/>
         <property name="loopback:unloadOperation" value="Unload cargo"/>
         <vehicleLayout color="#33FF00"/>
@@ -638,7 +638,7 @@
         <property name="loopback:loadOperation" value="Load cargo"/>
         <property name="loopback:unloadOperation" value="Unload cargo"/>
         <vehicleLayout color="#FF33FF"/>
-    </vehicle>
+    </vehicle> -->
     <locationType name="Fire door">
         <allowedPeripheralOperation name="Close"/>
         <allowedPeripheralOperation name="Open"/>
