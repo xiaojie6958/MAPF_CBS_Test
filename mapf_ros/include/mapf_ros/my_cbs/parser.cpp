@@ -135,6 +135,12 @@ void MapParser::createNodes(TiXmlHandle *hRootNode, bool onlyFirstElement) {
     }
 
     map_nodes_.emplace_back(tmp_node);
+    // 获得map_point_id和地图节点之间的关系
+    //  std::cout << "Node ID: " << tmp_node.node_id << ", Name: " <<
+    //  tmp_node.name
+    //            << ", Coordinates: (" << tmp_node.x_pos << ", " <<
+    //            tmp_node.y_pos << ")"
+    //            << std::endl;
 
     if (onlyFirstElement)
       return;

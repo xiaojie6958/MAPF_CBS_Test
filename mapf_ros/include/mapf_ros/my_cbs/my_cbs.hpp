@@ -59,13 +59,13 @@ public:
 
 private:
   struct HighLevelNode {
-    //每一个机器人的规划结果存储
+    // 每一个机器人的规划结果存储
     std::vector<PlanResult<State, Action, Cost>> solution;
-    //每一个机器人的限制条件约束
+    // 每一个机器人的限制条件约束
     std::vector<Constraints> constraints;
-    //上层规划的总代价
+    // 上层规划的总代价
     Cost cost;
-    //上层规划节点的id好
+    // 上层规划节点的id号
     int id;
 
     bool operator<(const HighLevelNode &n) const { return cost > n.cost; }

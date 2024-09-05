@@ -24,7 +24,7 @@
 
 #include "path_finder_algorithm/dijkstra.h"
 
-//用于json的序列化和反序列化
+// 用于json的序列化和反序列化
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -33,13 +33,13 @@ namespace mapf {
 class MYCBSROS {
 public:
   struct ResultPoint {
-    //路点在路网地图中的索引下标
+    // 路点在路网地图中的索引下标
     int point_id;
-    //路点的代价
+    // 路点的代价
     int cost;
-    //在该路点的等待时间
+    // 在该路点的等待时间
     int wait_time;
-    //路点的x,y位置坐标
+    // 路点的x,y位置坐标
     std::pair<double, double> x_y;
 
     ResultPoint() {
@@ -51,42 +51,42 @@ public:
     std::pair<int, int> conflict_id;
     std::pair<int, int> point_ids;
   };
-  //对调度系统中的车辆进行定义
+  // 对调度系统中的车辆进行定义
   struct Vehicle {
-    //车辆的id号
+    // 车辆的id号
     int car_id;
     // 1-在车库等待召唤；2-在执行任务中;3-执行任务完成，返回车库中
     int car_status;
-    //车辆停泊的车库id
+    // 车辆停泊的车库id
     int garage_id;
-    //车辆正在执行的任务id
+    // 车辆正在执行的任务id
     int task_id;
-    //车辆的x,y坐标
+    // 车辆的x,y坐标
     double x_pose;
     double y_pose;
   };
 
-  //对调度系统中的任务进行定义
+  // 对调度系统中的任务进行定义
   struct Task {
-    //任务的id号
+    // 任务的id号
     int task_id;
-    //任务的起始位置在路网地图中的索引下标
+    // 任务的起始位置在路网地图中的索引下标
     int task_start_id;
-    //任务终点位置在路网地图中的索引下标
+    // 任务终点位置在路网地图中的索引下标
     int task_goal_id;
     // 1-任务待接单状态；2-任务正在进行状态；3-任务已完成状态
     int task_status;
-    //任务执行的车辆id号
+    // 任务执行的车辆id号
     int execution_car_id;
   };
 
-  //对调度系统中的车库进行定义
+  // 对调度系统中的车库进行定义
   struct Garage {
-    //车库本身的编号id
+    // 车库本身的编号id
     int garage_id;
-    //车库所在路网地图中的路点id号
+    // 车库所在路网地图中的路点id号
     int map_point_id;
-    //停靠在车库中的车辆的索引
+    // 停靠在车库中的车辆的索引
     std::vector<int> parking_vehicle_index;
   };
   MYCBSROS(ros::NodeHandle *nh);
@@ -100,7 +100,7 @@ public:
   bool makePlan(const Task task, mapf_msgs::GlobalPlan &plan, double &cost,
                 std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance);
-  //【仅在实际车辆测试时使用】
+  // 【仅在实际车辆测试时使用】
   bool makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
                 std::vector<std::vector<int>> &all_path_ids,
                 const double &time_tolerance, bool real_car);
@@ -112,18 +112,18 @@ public:
 
   int control_step_ = 0;
 
-  //所有车辆起始位置的id
+  // 所有车辆起始位置的id
   std::vector<int> vehicle_init_ids_;
-  //所有任务起点位置的id
+  // 所有任务起点位置的id
   std::vector<int> start_ids_;
-  //所有任务终点位置的id
+  // 所有任务终点位置的id
   std::vector<int> goal_ids_;
 
-  //车辆的列表
+  // 车辆的列表
   std::vector<Vehicle> vehicle_list_;
-  //任务列表
+  // 任务列表
   std::vector<Task> task_list_;
-  //车库列表
+  // 车库列表
   std::vector<Garage> garage_list_;
 
 protected:
@@ -131,21 +131,21 @@ protected:
 
   ros::NodeHandle *nh_;
 
-  //存储规划后的所有路径点，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
+  // 存储规划后的所有路径点，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含ID和路径
   std::vector<std::vector<int>> all_path_ids_;
 
-  //存储规划后的结果，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
+  // 存储规划后的结果，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
   std::vector<std::vector<ResultPoint>> all_results_;
 
-  //存储每一个机器人运动过程中的路径点，两个阶段（车辆当前位置->任务起点位置->任务终点位置）的点都包含
+  // 存储每一个机器人运动过程中的路径点，两个阶段（车辆当前位置->任务起点位置->任务终点位置)路径坐标
   std::vector<std::vector<std::pair<double, double>>> all_pos_;
 
-  //存储任务分配的结果
+  // 存储任务分配的结果
   std::vector<int> task_assign_result_;
 
-  //存储每一个任务中，两个阶段切换的点的下标索引（all_results_中的下标索引）
+  // 存储每一个任务中，两个阶段切换的点的下标索引（all_results_中的下标索引）
   std::vector<int> all_pos_switch_index_;
-  //存储每一个任务中，两个阶段切换的点的下标索引（all_pos_中的下标索引）
+  // 存储每一个任务中，两个阶段切换的点的下标索引（all_pos_中的下标索引）
   std::vector<int> final_switch_index_;
 
   ros::Publisher pub_start_goal_point_;
@@ -183,16 +183,16 @@ public:
 
   std::vector<std::vector<std::pair<double, double>>> all_route_path_for_show_;
 
-  //解决conflict中包含冲突
+  // 解决conflict中包含冲突
   bool conflictSolve(Conflict conflict);
 
-  //检测path_i和path_j中的第一个冲突，存到conflict里
+  // 检测path_i和path_j中的第一个冲突，存到conflict里
   bool conflictDetect(int path_i, int path_j, Conflict &conflict);
 
-  //检测所有路径中的第一个冲突，存到conflict里
+  // 检测所有路径中的第一个冲突，存到conflict里
   bool firstConflictDetect(Conflict &conflict);
 
-  //判断pt1和pt2是否有冲突
+  // 判断pt1和pt2是否有冲突
   bool twoResultPointConflict(const ResultPoint pt1, const ResultPoint pt2);
 
   void printAllResult();
@@ -205,17 +205,17 @@ public:
   void setOrderCallback(const std_msgs::StringConstPtr &msg_in);
   map_parser::MapParser *map_parser_ = nullptr;
 
-  //地图中所有的node节点
+  // 地图中所有的node节点
   std::vector<MapParser::MAP_NODE> map_nodes_;
   // node节点由名字到id的转换map
   std::unordered_map<std::string, int> node_name_to_id_;
   // node节点由id到名字的转换map
   std::unordered_map<int, std::string> node_id_to_name_;
-  //地图的拓扑结构
+  // 地图的拓扑结构
   std::vector<std::vector<float>> original_network_array_;
-  //实车测试标志
+  // 实车测试标志
   bool real_car_ = false;
-  //是否有车辆在调度中运行
+  // 是否有车辆在调度中运行
   bool car_running_ = false;
 };
 } // namespace mapf
