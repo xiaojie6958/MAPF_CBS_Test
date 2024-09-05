@@ -475,8 +475,8 @@ void MapParser::publishMapArray() {
   point_marker.color.a = 0.5;
 
   point_marker.id = id_count++;
-  point_marker.pose.position.x = map_nodes_.back().x_pos;
-  point_marker.pose.position.y = map_nodes_.back().y_pos;
+  point_marker.pose.position.x = map_nodes_[map_nodes_.size() - 2].x_pos;
+  point_marker.pose.position.y = map_nodes_[map_nodes_.size() - 2].y_pos;
   map_marker_array.markers.emplace_back(point_marker);
 
   // 画工作区A

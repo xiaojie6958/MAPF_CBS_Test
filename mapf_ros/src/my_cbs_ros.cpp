@@ -71,13 +71,45 @@ bool MYCBSROS::makePlan(const std::vector<Task> task,
                         mapf_msgs::GlobalPlan &plan, double &cost,
                         std::vector<std::vector<int>> &all_path_ids,
                         const double &time_tolerance) {
+  // 打印小车目前的状态和任务的状态
+  std::cout << "当前车辆状态：" << std::endl;
+  for (const auto &vehicle : vehicle_list_) {
+    std::cout << "车辆ID: " << vehicle.car_id
+              << ", 状态: " << vehicle.car_status;
+    if (vehicle.car_status == 2) {
+      std::cout << " (执行任务中)";
+    } else if (vehicle.car_status == 1) {
+      std::cout << " (在车库等待)";
+    } else if (vehicle.car_status == 3) {
+      std::cout << " (返回车库中)";
+    } else if (vehicle.car_status == 0) {
+      std::cout << " (停车作业中)";
+    }
+    std::cout << std::endl;
+  }
+
+  std::cout << "\n当前任务状态：" << std::endl;
+  for (const auto &task : task_list_) {
+    std::cout << "任务ID: " << task.task_id << ", 状态: " << task.task_status;
+    if (task.task_status == 1) {
+      std::cout << " (待接单)";
+    } else if (task.task_status == 2) {
+      std::cout << " (进行中)";
+    } else if (task.task_status == 3) {
+      std::cout << " (已完成)";
+    } else if (task.task_status == 4) {
+      std::cout << " (已结束)";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
 
   // garage是有车停靠的车库的位置
   if (task.empty()) {
     ROS_ERROR("garage or task vectors are empty!");
     return false;
   }
-  // 读取task的数据
+  // 读取任务的数据
   std::vector<int> assign_result;
   std::vector<int> start;
   std::vector<int> goal_ids;
@@ -106,6 +138,11 @@ bool MYCBSROS::makePlan(const std::vector<Task> task,
       int task_id = vehicle_list_[i].task_id;
       int vehicle_cur_id = findNextId(task_id);
       garage.emplace_back(vehicle_cur_id);
+    }
+    // 将状态为0的车所在地点也视为车库，下个任务来临可以从此初调用小车
+    if (vehicle_list_[i].car_status == 0) {
+      // 获取当前位置作为车库点
+      garage.emplace_back(all_pos_[i].back().first);
     }
   }
   // 分配车库和起点,assign_result中存储的是任务对应的车库点ID，是一个对应关系，例如assign[1]对应的，车库点map_point_id
@@ -142,7 +179,16 @@ bool MYCBSROS::makePlan(const std::vector<Task> task,
           break;
         }
       }
-      // 将任务状态改成4
+      // 未找到car_status == 3的车，寻找car_status == 0的车辆
+      if (car_index == -1) {
+        for (int i = 0; i < vehicle_list_.size(); i++) {
+          if (vehicle_list_[i].car_status == 0) {
+            car_index = i;
+            break;
+          }
+        }
+      }
+      // 绑定任务和车辆
       if (car_index != -1) {
         task_list_[vehicle_list_[car_index].task_id].task_status = 4;
         // 分配给找到的车辆更新任务状态为2
@@ -414,10 +460,13 @@ bool MYCBSROS::makePlan(mapf_msgs::GlobalPlan &plan, double &cost,
 
   return success;
 }
-
+// 计算结果转换为ROS消息，cost和makespan存储在plan中，将Solution转换成ROS
+// 消息格式 (mapf_msgs::GlobalPlan)，其中包含每个车辆的路径 (SinglePlan)。
+// 输入solution和goal；输出plan&cost
 void MYCBSROS::generatePlan(
     const std::vector<PlanResult<State, Action, int>> &solution,
     const std::vector<int> &goal, mapf_msgs::GlobalPlan &plan, double &cost) {
+  // 更新makespan和cost
   int &makespan = plan.makespan;
   for (const auto &s : solution) {
     cost += s.cost;
@@ -429,7 +478,7 @@ void MYCBSROS::generatePlan(
   plan.global_plan.resize(solution.size());
 
   std::cout << "solution_size : " << solution.size() << std::endl;
-
+  // 遍历solution生成每辆车的信息
   for (size_t i = 0; i < solution.size(); ++i) {
     // create a message for the plan
     mapf_msgs::SinglePlan &single_plan = plan.global_plan[i];
@@ -437,7 +486,7 @@ void MYCBSROS::generatePlan(
     single_path.header.frame_id = "world";
     single_path.header.stamp = ros::Time::now();
     std::cout << "result[" << i << "] : ";
-
+    // 将状态信息转为 PoseStamped 并添加到路径
     for (const auto &state : solution[i].states) {
       geometry_msgs::PoseStamped cur_pose;
       cur_pose.header.frame_id = single_path.header.frame_id;
@@ -600,6 +649,7 @@ void MYCBSROS::publishOneStepPos(const int step) {
       point_marker.color.a = 1.0;
     }
     point_marker.color.a = 0.8;
+    // 车在车库内
     if (vehicle_list_[i].car_status == 1) {
       point_marker.pose.position.x =
           map_nodes_[garage_list_[vehicle_list_[i].garage_id].map_point_id]
@@ -607,21 +657,25 @@ void MYCBSROS::publishOneStepPos(const int step) {
       point_marker.pose.position.y =
           map_nodes_[garage_list_[vehicle_list_[i].garage_id].map_point_id]
               .y_pos;
-    } else {
+    } else { // 车辆正在执行任务
       int index = vehicle_list_[i].task_id;
+      // 到达路径终点
       if (loop_step >= all_pos_[index].size()) {
         point_marker.pose.position.x = all_pos_[index].back().first;
         point_marker.pose.position.y = all_pos_[index].back().second;
+
         if (task_list_[index].task_status == 2) {
           std::cout << "loop_step : " << loop_step << std::endl;
           std::cout << "all_pos_[" << index
                     << "] size : " << all_pos_[index].size() << std::endl;
           std::cout << "vehicle id : " << i << std::endl;
           std::cout << "task id : " << index << std::endl;
-          backToGarage(index);
+          // backToGarage(index);
+          // 设置车辆停止状态并更新任务状态
+          vehicle_list_[i].car_status = 0; // 设定一个停止状态，比如0
+          task_list_[index].task_status = 4; // 或者使用一个新的状态标识停止
           loop_step = 0;
-        } else if (task_list_[index].task_status == 3) {
-
+        } else if (task_list_[index].task_status == 3) { // 回库中
           std::cout << "task_status : 4" << std::endl;
           vehicle_list_[i].car_status = 1;
           task_list_[index].task_status = 4;
@@ -638,7 +692,7 @@ void MYCBSROS::publishOneStepPos(const int step) {
 
     text_marker.header.seq = count;
     text_marker.id = count;
-
+    // 更新车辆位置
     if (vehicle_list_[i].car_status == 1) {
       text_marker.pose.position.x =
           map_nodes_[garage_list_[vehicle_list_[i].garage_id].map_point_id]
@@ -1051,6 +1105,7 @@ bool MYCBSROS::assignTasks(const std::vector<int> &vehicles_init,
   task_assign_result_.clear();
   task_assign_result_.resize(start.size());
   assign_result.resize(start.size());
+
   for (int i = 0; i < vehicles_init.size(); i++) {
     vehicle_states.emplace_back(std::make_pair(vehicles_init[i], false));
   }
@@ -1088,16 +1143,20 @@ bool MYCBSROS::assignTasks(const std::vector<int> &vehicles_init,
     for (int j = 0; j < vehicles_init.size(); j++) {
       if (vehicle_states[j].second == true)
         continue;
-      std::shared_ptr<std::vector<std::vector<float>>> graph =
-          std::make_shared<std::vector<std::vector<float>>>(
-              original_network_array_);
-      map_parser::path_finder_algorithm::Dijkstra dij;
-      auto path = dij.findShortestPath(graph, vehicle_states[j].first,
-                                       start[iter.second]);
-      double dis = calculatePathLength(path);
-      if (dis < min_distance) {
-        res = j;
-        min_distance = dis;
+      // 在车库或者是停留都可以接受任务
+      if (vehicle_list_[j].car_status == 0 ||
+          vehicle_list_[j].car_status == 1) {
+        std::shared_ptr<std::vector<std::vector<float>>> graph =
+            std::make_shared<std::vector<std::vector<float>>>(
+                original_network_array_);
+        map_parser::path_finder_algorithm::Dijkstra dij;
+        auto path = dij.findShortestPath(graph, vehicle_states[j].first,
+                                         start[iter.second]);
+        double dis = calculatePathLength(path);
+        if (dis < min_distance) {
+          res = j;
+          min_distance = dis;
+        }
       }
     }
     assign_result[iter.second] = vehicles_init[res];
@@ -1297,7 +1356,7 @@ void MYCBSROS::backToGarage(const int task_id) {
   // 第一步：保存现有的all_results_;
   std::cout << "task id : " << task_id << std::endl;
   auto original_all_results = all_results_;
-
+  // 标记未完成任务车辆的新位置
   std::vector<ResultPoint> original_new_start_points;
   original_new_start_points.clear();
   original_new_start_points.resize(all_results_.size());
@@ -1335,6 +1394,7 @@ void MYCBSROS::backToGarage(const int task_id) {
     }
   }
 
+  // 重新构建路径，将未完成任务车辆的新位置作为路径的第一个点，并将原始路径中的剩余部分添加到新的路径中。
   original_all_results.clear();
   for (int i = 0; i < all_results_.size(); i++) {
     if (i == task_id) {
@@ -1514,7 +1574,7 @@ int main(int argc, char **argv) {
   std::vector<int> vehicles_init; //{1, 2, 3, 4}
 
   if (my_cbs_ros.real_car_ == false) {
-    vehicles_init = {11, 13, 20, 31};
+    vehicles_init = {11}; //, 13, 20, 31
   } else {
     vehicles_init = {0};
   }
@@ -1522,31 +1582,31 @@ int main(int argc, char **argv) {
   my_cbs_ros.vehicle_init_ids_ = vehicles_init;
 
   // 初始化车库编号和位置
-  my_cbs_ros.garage_list_.clear();
+  // my_cbs_ros.garage_list_.clear();
+  // my_cbs_ros.garage_list_.emplace_back();
+  // my_cbs_ros.garage_list_.back().garage_id = 0;
+  // my_cbs_ros.garage_list_.back().map_point_id = 57; // 59
+
+  // my_cbs_ros.garage_list_.emplace_back();
+  // my_cbs_ros.garage_list_.back().garage_id = 1;
+  // my_cbs_ros.garage_list_.back().map_point_id = 58; // 60
+
+  // my_cbs_ros.garage_list_.emplace_back();
+  // my_cbs_ros.garage_list_.back().garage_id = 2;
+  // my_cbs_ros.garage_list_.back().map_point_id = 59;
+
   my_cbs_ros.garage_list_.emplace_back();
   my_cbs_ros.garage_list_.back().garage_id = 0;
-  my_cbs_ros.garage_list_.back().map_point_id = 57; // 59
-
-  my_cbs_ros.garage_list_.emplace_back();
-  my_cbs_ros.garage_list_.back().garage_id = 1;
-  my_cbs_ros.garage_list_.back().map_point_id = 58; // 60
-
-  my_cbs_ros.garage_list_.emplace_back();
-  my_cbs_ros.garage_list_.back().garage_id = 2;
   my_cbs_ros.garage_list_.back().map_point_id = 59;
-
-  my_cbs_ros.garage_list_.emplace_back();
-  my_cbs_ros.garage_list_.back().garage_id = 3;
-  my_cbs_ros.garage_list_.back().map_point_id = 60;
 
   // 初始化车辆位置及初始停靠的车库
   my_cbs_ros.vehicle_list_.clear();
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 1; i++) {
     mapf::MYCBSROS::Vehicle vehicle;
     vehicle.car_id = i;
     vehicle.car_status = 1;
-    vehicle.garage_id = i;
-    my_cbs_ros.garage_list_[i].parking_vehicle_index.emplace_back(i);
+    vehicle.garage_id = 0;
+    my_cbs_ros.garage_list_[0].parking_vehicle_index.emplace_back(i);
     my_cbs_ros.vehicle_list_.emplace_back(vehicle);
   }
 
@@ -1566,16 +1626,17 @@ int main(int argc, char **argv) {
   my_cbs_ros.control_step_ = 0;
 
   while (ros::ok()) {
-    my_cbs_ros.map_parser_->publishMapArray();
-    my_cbs_ros.map_parser_->publishMapArrow();
+    my_cbs_ros.map_parser_->publishMapArray(); // 发布地图的节点信息，功能区
+    my_cbs_ros.map_parser_->publishMapArrow(); // 发布箭头信息
 
-    my_cbs_ros.publishStartGoalPoint();
+    my_cbs_ros.publishStartGoalPoint(); // 起始点信息
 
-    my_cbs_ros.updateAllRoutePathForShow();
+    my_cbs_ros.updateAllRoutePathForShow(); // 更新all_route_path_for_show
     my_cbs_ros.map_parser_->publishAllRoutePath(
-        my_cbs_ros.all_route_path_for_show_);
+        my_cbs_ros.all_route_path_for_show_); // 显示车辆的行驶路线
 
-    my_cbs_ros.publishOneStepPos(my_cbs_ros.control_step_);
+    my_cbs_ros.publishOneStepPos(
+        my_cbs_ros.control_step_); // 发布车辆在当前步的位置信息
     my_cbs_ros.control_step_ = my_cbs_ros.control_step_ + 1;
 
     ros::spinOnce();
