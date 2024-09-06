@@ -101,6 +101,6 @@
     "variant": "cpp",
     "tensor": "cpp"
   },
-  "C_Cpp.errorSquiggles": "Enabled",
+  "C_Cpp.errorSquiggles": "enabled",
   "cmake.sourceDirectory": "${workspaceFolder}/src/common/configs"
 }
